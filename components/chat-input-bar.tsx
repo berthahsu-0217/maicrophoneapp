@@ -73,8 +73,8 @@ export function ChatInputBar({
                     type="button"
                     onClick={onToggleListening}
                     className={`p-3 rounded-full transition-colors flex-shrink-0 ${isListening
-                            ? 'text-green-400 bg-green-500/20 hover:bg-green-500/30 animate-pulse'
-                            : 'text-zinc-400 hover:text-white bg-zinc-800 hover:bg-zinc-700'
+                        ? 'text-green-400 bg-green-500/20 hover:bg-green-500/30 animate-pulse'
+                        : 'text-zinc-400 hover:text-white bg-zinc-800 hover:bg-zinc-700'
                         }`}
                     aria-label={isListening ? 'Stop speech-to-text' : 'Speech-to-text'}
                     title="Speech to text"
@@ -87,8 +87,8 @@ export function ChatInputBar({
                     type="button"
                     onClick={isRecording ? onStopRecording : onStartRecording}
                     className={`p-3 rounded-full transition-colors flex-shrink-0 ${isRecording
-                            ? 'text-red-500 bg-red-500/20 hover:bg-red-500/30 animate-pulse'
-                            : 'text-zinc-400 hover:text-white bg-zinc-800 hover:bg-zinc-700'
+                        ? 'text-red-500 bg-red-500/20 hover:bg-red-500/30 animate-pulse'
+                        : 'text-red-500 hover:text-red-400 bg-red-500/20 hover:bg-red-500/30'
                         }`}
                     aria-label={isRecording ? 'Stop recording' : 'Record audio'}
                     title="Record audio"
