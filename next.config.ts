@@ -19,6 +19,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  allowedDevOrigins: ['192.168.30.129'],
   output: 'standalone',
   transpilePackages: ['motion'],
   webpack: (config, { dev }) => {

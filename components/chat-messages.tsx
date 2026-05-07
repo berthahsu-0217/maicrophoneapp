@@ -1,16 +1,78 @@
 import { FileAudio, Search } from 'lucide-react';
 
+const YOUTUBE_VIDEO_ID_RE = /^[a-zA-Z0-9_-]{11}$/;
+
+interface YouTubeVideoResult {
+    videoId: string;
+    title: string;
+    channelTitle: string;
+    url: string;
+    embedUrl: string;
+}
+
+function extractYouTubeVideos(result: unknown): YouTubeVideoResult[] {
+    const rawList = Array.isArray(result)
+        ? result
+        : (result && typeof result === 'object'
+            ? ((result as Record<string, unknown>).videos
+                ?? (result as Record<string, unknown>).items
+                ?? (result as Record<string, unknown>).result
+                ?? (result as Record<string, unknown>).results)
+            : null);
+
+    if (!Array.isArray(rawList)) return [];
+
+    return rawList
+        .map((item) => {
+            if (!item || typeof item !== 'object') return null;
+            const obj = item as Record<string, unknown>;
+            const videoId = typeof obj.videoId === 'string' ? obj.videoId : '';
+            const title = typeof obj.title === 'string' ? obj.title : '';
+            const channelTitle = typeof obj.channelTitle === 'string' ? obj.channelTitle : '';
+            const url = typeof obj.url === 'string' ? obj.url : '';
+            const embedUrl = typeof obj.embedUrl === 'string' ? obj.embedUrl : '';
+
+            if (!videoId || !YOUTUBE_VIDEO_ID_RE.test(videoId) || !title) return null;
+
+            return { videoId, title, channelTitle, url, embedUrl };
+        })
+        .filter((video): video is YouTubeVideoResult => video !== null);
+}
+
 interface MessagePart {
     type: string;
     text?: string;
     mediaType?: string;
     url?: string;
+    state?: string;
+    result?: unknown;
+    output?: unknown;
     toolInvocation?: {
         toolName: string;
         state: string;
         args?: Record<string, unknown>;
         result?: unknown;
     };
+}
+
+function getToolPayload(part: MessagePart): { toolName: string; state: string; result: unknown } | null {
+    if (part.type === 'tool-invocation' && part.toolInvocation) {
+        return {
+            toolName: part.toolInvocation.toolName,
+            state: part.toolInvocation.state,
+            result: part.toolInvocation.result,
+        };
+    }
+
+    if (part.type.startsWith('tool-')) {
+        return {
+            toolName: part.type.slice(5),
+            state: typeof part.state === 'string' ? part.state : 'result',
+            result: part.result ?? part.output,
+        };
+    }
+
+    return null;
 }
 
 interface Message {
@@ -57,8 +119,56 @@ export function ChatMessages({ messages, isLoading, uploadProgress }: ChatMessag
                                         </details>
                                     );
                                     if (p.type === 'text') return <span key={i}>{p.text}</span>;
-                                    if (p.type === 'tool-invocation' && p.toolInvocation) {
-                                        const { toolName, state } = p.toolInvocation;
+                                    const toolPayload = getToolPayload(p);
+                                    if (toolPayload) {
+                                        const { toolName, state, result } = toolPayload;
+                                        const normalizedToolName = toolName.toLowerCase();
+
+                                        if ((normalizedToolName === 'searchyoutubevideos') && result != null) {
+                                            const videos = extractYouTubeVideos(result);
+
+                                            if (videos.length === 0) {
+                                                return (
+                                                    <div key={i} className="text-xs text-zinc-400 my-1">
+                                                        找不到可播放的 YouTube 建議。
+                                                    </div>
+                                                );
+                                            }
+
+                                            return (
+                                                <div key={i} className="space-y-3 mt-2">
+                                                    {videos.map((video) => (
+                                                        <div key={video.videoId} className="rounded-2xl border border-zinc-700 bg-zinc-900/70 p-3">
+                                                            <div className="text-sm font-semibold text-zinc-100 line-clamp-2">{video.title}</div>
+                                                            {video.channelTitle && (
+                                                                <div className="text-xs text-zinc-400 mt-1">{video.channelTitle}</div>
+                                                            )}
+                                                            <div className="mt-2 overflow-hidden rounded-xl border border-zinc-700">
+                                                                <iframe
+                                                                    src={video.embedUrl || `https://www.youtube.com/embed/${video.videoId}`}
+                                                                    title={video.title}
+                                                                    className="w-full aspect-video"
+                                                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                                                    referrerPolicy="strict-origin-when-cross-origin"
+                                                                    allowFullScreen
+                                                                />
+                                                            </div>
+                                                            {video.url && (
+                                                                <a
+                                                                    href={video.url}
+                                                                    target="_blank"
+                                                                    rel="noreferrer"
+                                                                    className="inline-block mt-2 text-xs text-indigo-300 hover:text-indigo-200"
+                                                                >
+                                                                    Open on YouTube
+                                                                </a>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            );
+                                        }
+
                                         return (
                                             <div key={i} className="flex items-center gap-2 text-xs text-zinc-400 my-1">
                                                 <Search className="w-3 h-3" />
