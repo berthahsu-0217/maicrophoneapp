@@ -56,10 +56,10 @@
 ## Phase 5：排行榜
 
 ### 後端
-- [ ] 實作 `GET /api/leaderboard?type={type}&limit={limit}`：從 `users` 讀取分數，API 端計算總分排序，回傳排名列表。
+- [x] 實作 `GET /api/leaderboard?type={type}&limit={limit}`：從 `users` 讀取分數，API 端計算總分排序，回傳排名列表。
 
 ### 前端
-- [ ] 建立排行榜頁面：切換總分 / 單項排行，顯示排名、username、稱號、各項分數。
+- [x] 建立排行榜頁面：切換總分 / 單項排行，顯示排名、username、稱號、各項分數。
 
 ---
 
