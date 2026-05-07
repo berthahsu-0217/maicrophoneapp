@@ -3,14 +3,14 @@
 ## Phase 1：登入與使用者系統
 
 ### 後端
-- [ ] 在 Supabase 建立 `users` table（含 username、五項最高分、稱號欄位與索引）。
-- [ ] 實作 `POST /api/login`：驗證 username 長度 2–20，upsert user，回傳 userId、username、title、scores。
-- [ ] 實作 `GET /api/users/[userId]`：回傳使用者資訊與五項最高分。
+- [x] 在 Supabase 建立 `users` table（含 username、五項最高分、稱號欄位與索引）。
+- [x] 實作 `POST /api/login`：驗證 username 長度 2–20，upsert user，回傳 userId、username、title、scores。
+- [x] 實作 `GET /api/users/[userId]`：回傳使用者資訊與五項最高分。
 
 ### 前端
-- [ ] 建立登入頁（歡迎頁）：Logo、標語、username 輸入框、「開始挑戰」按鈕。
-- [ ] 實作 localStorage 登入狀態管理：登入成功存 `{ userId, username }`，頁面載入時檢查並導向。
-- [ ] 實作登出功能：清除 localStorage 並導回登入頁。
+- [x] 建立登入頁（歡迎頁）：Logo、標語、username 輸入框、「開始挑戰」按鈕。
+- [x] 實作 localStorage 登入狀態管理：登入成功存 `{ userId, username }`，頁面載入時檢查並導向。
+- [x] 實作登出功能：清除 localStorage 並導回登入頁。
 
 ---
 

@@ -1,15 +1,19 @@
 'use client';
 
 import { useChat } from '@ai-sdk/react';
-import { Waves } from 'lucide-react';
+import { LogOut, Waves } from 'lucide-react';
 import { useCallback, useState } from 'react';
 
 import { ChatInputBar } from '@/components/chat-input-bar';
 import { ChatMessages } from '@/components/chat-messages';
 import { useAudioRecorder } from '@/hooks/use-audio-recorder';
+import { useAuth } from '@/hooks/use-auth';
 import { useSpeechToText } from '@/hooks/use-speech-to-text';
+import { logout } from '@/lib/auth';
 
 export default function Home() {
+  const user = useAuth();
+
   const [input, setInput] = useState('');
   const [sessionId] = useState(() => {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -110,6 +114,8 @@ export default function Home() {
   };
 
   // ─── Render ───
+  if (!user) return null;
+
   return (
     <main className="flex flex-col items-center justify-between min-h-screen bg-zinc-950 text-white font-sans p-6 overflow-hidden relative">
       {/* Background gradient */}
@@ -117,7 +123,16 @@ export default function Home() {
 
       <div className="relative z-10 flex flex-col items-center space-y-6 text-center max-w-3xl w-full flex-1 min-h-0 pt-4">
         {/* Header */}
-        <header className="space-y-4 shrink-0">
+        <header className="space-y-4 shrink-0 relative w-full">
+          {user && (
+            <button
+              onClick={logout}
+              className="absolute right-0 top-0 flex items-center gap-1 rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-400 hover:text-white hover:border-zinc-500 transition"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              登出
+            </button>
+          )}
           <div className="inline-flex items-center justify-center p-3 bg-zinc-900 border border-zinc-800 rounded-2xl mb-2 shadow-xl">
             <Waves className="w-8 h-8 text-indigo-400" />
           </div>
