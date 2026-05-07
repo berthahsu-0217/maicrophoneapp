@@ -14,16 +14,20 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ use
         return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
+    const scores = {
+        rhythm: data.score_rhythm,
+        expression: data.score_expression,
+        technique: data.score_technique,
+        stability: data.score_stability,
+        pitch: data.score_pitch,
+    };
+    const total = scores.rhythm + scores.expression + scores.technique + scores.stability + scores.pitch;
+
     return NextResponse.json({
         userId: data.id,
         username: data.username,
         title: data.title,
-        scores: {
-            rhythm: data.score_rhythm,
-            expression: data.score_expression,
-            technique: data.score_technique,
-            stability: data.score_stability,
-            pitch: data.score_pitch,
-        },
+        scores,
+        total,
     });
 }

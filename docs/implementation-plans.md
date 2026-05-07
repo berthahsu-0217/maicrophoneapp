@@ -17,36 +17,39 @@
 ## Phase 2：挑戰關卡首頁
 
 ### 後端
-- [ ] 確認 `GET /api/users/[userId]` 回傳格式滿足首頁需求（稱號、五項分數、total）。
+- [x] 確認 `GET /api/users/[userId]` 回傳格式滿足首頁需求（稱號、五項分數、total）。
 
 ### 前端
-- [ ] 建立挑戰關卡首頁：四張卡片（魔法少女Do Re Mi、一口氣到底、K哥之王、超級星光大道）。
-- [ ] 右上角使用者資訊區：顯示 username、五項歷史最高分、稱號。
-- [ ] 登出按鈕整合。
+- [x] 建立挑戰關卡首頁：四張卡片（魔法少女Do Re Mi、一口氣到底、K哥之王、超級星光大道）。
+- [x] 右上角使用者資訊區：顯示 username、五項歷史最高分、稱號。
+- [x] 登出按鈕整合。
 
 ---
 
 ## Phase 3：錄音上傳
 
+### 資料庫
+- [x] 建立 `recordings` table（`002_create_recordings.sql`）：id, user_id, storage_path, public_url, file_size, mime_type, duration_seconds, created_at，含索引。
+
 ### 後端
-- [ ] 擴充 `POST /api/upload-audio`：接收 `userId`、`durationSeconds`，上傳至 Supabase Storage，回傳 `url`、`storagePath`。
+- [x] 擴充 `POST /api/upload-audio`：接收 `userId`、`durationSeconds`，上傳至 Supabase Storage，建立 `recordings` row，回傳 `recordingId`、`url`、`storagePath`。
 
 ### 前端
-- [ ] 錄音元件整合：請求麥克風權限、錄音、回放、取消、送出。
-- [ ] 上傳時帶入 `userId`，接收並使用回傳的 `url`。
+- [x] 錄音元件整合：請求麥克風權限、錄音、回放、取消、送出。
+- [x] 上傳時帶入 `userId`，接收並使用回傳的 `url`。
 
 ---
 
 ## Phase 4：AI 評分與分數更新
 
 ### 後端
-- [ ] 在 `lib/tools.ts` 新增 `uploadScore` tool：接收 `scoreType`（rhythm / expression / technique 等）與 `score`，從 request context 取 `userId`，比較現有分數後更新 `users` 最高分與稱號。
-- [ ] 確保 `/api/chat` route 從 request body 取出 `userId` 並注入 tool context。
-- [ ] 更新 system prompt，指導 agent 分析音檔後呼叫 `uploadScore`（最多三次）。
+- [x] 在 `lib/tools.ts` 新增 `uploadScore` tool：接收 `scoreType`（rhythm / expression / technique / pitch / stability）與 `score`，比較現有分數後更新 `users` 最高分與稱號。
+- [x] 確保 `/api/chat` route 從 request body 取出 `userId` 並注入 tool context。
+- [x] 更新 system prompt，指導 agent 分析音檔後呼叫 `uploadScore`（五個維度各一次）。
 
 ### 前端
-- [ ] `useChat` 設定 `body: { userId }`，確保每次請求帶入 userId。
-- [ ] 第三關（K哥之王）頁面：聊天視窗 UI，顯示文字回覆與工具結果卡片（YouTube 影片卡片等）。
+- [x] `useChat` 透過 `DefaultChatTransport` body 傳入 `userId`，確保每次請求帶入 userId。
+- [x] 第三關（K哥之王）頁面：聊天視窗 UI，顯示文字回覆與工具結果卡片（YouTube 影片卡片等）。
 
 ---
 

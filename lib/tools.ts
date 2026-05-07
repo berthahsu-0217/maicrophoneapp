@@ -1,9 +1,31 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 
+import { supabase } from '@/lib/supabase';
+
 const YOUTUBE_VIDEO_ID_RE = /^[a-zA-Z0-9_-]{11}$/;
 
-export function makeTools() {
+const SCORE_COLUMNS: Record<string, string> = {
+    pitch: 'score_pitch',
+    rhythm: 'score_rhythm',
+    expression: 'score_expression',
+    technique: 'score_technique',
+    stability: 'score_stability',
+};
+
+const TITLES: [number, string][] = [
+    [200, '麥克風稱霸者'],
+    [150, '歌唱精靈'],
+    [100, '音樂行者'],
+    [50, '初出茅廬'],
+    [0, '大音痴是你'],
+];
+
+function computeTitle(total: number): string {
+    return (TITLES.find(([min]) => total >= min) ?? TITLES[TITLES.length - 1])[1];
+}
+
+export function makeTools(userId?: string) {
     const executeYouTubeSearch = async ({ query, maxResults = 3 }: { query: string; maxResults?: number }) => {
         const apiKey = process.env.YOUTUBE_API_KEY;
         if (!apiKey) {
@@ -118,6 +140,56 @@ export function makeTools() {
                 maxResults: z.number().int().min(1).max(5).optional().describe('How many videos to return (default: 3)'),
             }),
             execute: executeYouTubeSearch,
+        }),
+        uploadScore: tool({
+            description:
+                'Upload a score for the user after analyzing their singing. Call this once per score dimension. Only call after you have analyzed an audio recording.',
+            inputSchema: z.object({
+                scoreType: z.enum(['pitch', 'rhythm', 'expression', 'technique', 'stability']).describe('Which dimension to score'),
+                score: z.number().int().min(0).max(50).describe('Score from 0-50 for this dimension'),
+                reason: z.string().describe('Brief reason for this score'),
+            }),
+            execute: async ({ scoreType, score, reason }) => {
+                if (!userId) return { success: false, error: 'No userId provided' };
+
+                const column = SCORE_COLUMNS[scoreType];
+                if (!column) return { success: false, error: 'Invalid scoreType' };
+
+                // Get current score
+                const { data: user, error: fetchError } = await supabase
+                    .from('users')
+                    .select('score_pitch, score_rhythm, score_expression, score_technique, score_stability')
+                    .eq('id', userId)
+                    .single() as { data: any; error: any };
+
+                if (fetchError || !user) return { success: false, error: 'User not found' };
+
+                const currentScore = (user as any)[column] as number;
+                if (score <= currentScore) {
+                    return { success: true, updated: false, message: `Score ${score} not higher than current best ${currentScore}`, scoreType, score, reason };
+                }
+
+                // Calculate new total for title
+                const newScores = {
+                    score_pitch: user.score_pitch,
+                    score_rhythm: user.score_rhythm,
+                    score_expression: user.score_expression,
+                    score_technique: user.score_technique,
+                    score_stability: user.score_stability,
+                    [column]: score,
+                };
+                const total = Object.values(newScores).reduce((a, b) => a + b, 0);
+                const title = computeTitle(total);
+
+                const { error: updateError } = await supabase
+                    .from('users')
+                    .update({ [column]: score, title, updated_at: new Date().toISOString() })
+                    .eq('id', userId);
+
+                if (updateError) return { success: false, error: 'Update failed' };
+
+                return { success: true, updated: true, scoreType, score, previousScore: currentScore, newTotal: total, newTitle: title, reason };
+            },
         }),
     };
 }

@@ -1,7 +1,9 @@
 'use client';
 
 import { useChat } from '@ai-sdk/react';
-import { LogOut, Waves } from 'lucide-react';
+import { DefaultChatTransport } from 'ai';
+import { ArrowLeft, LogOut, Waves } from 'lucide-react';
+import Link from 'next/link';
 import { useCallback, useState } from 'react';
 
 import { ChatInputBar } from '@/components/chat-input-bar';
@@ -9,24 +11,18 @@ import { ChatMessages } from '@/components/chat-messages';
 import { useAudioRecorder } from '@/hooks/use-audio-recorder';
 import { useAuth } from '@/hooks/use-auth';
 import { useSpeechToText } from '@/hooks/use-speech-to-text';
-import { logout } from '@/lib/auth';
+import { getUser, logout } from '@/lib/auth';
 
 export default function Home() {
   const user = useAuth();
 
   const [input, setInput] = useState('');
-  const [sessionId] = useState(() => {
-    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-      return crypto.randomUUID();
-    }
-    // Fallback for insecure contexts
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-      const r = (Math.random() * 16) | 0;
-      return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
-    });
-  });
 
-  const { messages, sendMessage, setMessages, status } = useChat();
+  const { messages, sendMessage, setMessages, status } = useChat({
+    transport: new DefaultChatTransport({
+      body: () => ({ userId: user?.userId ?? getUser()?.userId }),
+    }),
+  });
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const isLoading = !!uploadProgress || status === 'submitted' || status === 'streaming';
 
@@ -76,14 +72,16 @@ export default function Home() {
       // Upload audio to Supabase via API route
       const formData = new FormData();
       formData.append('file', currentAudio.blob, 'recording.wav');
-      formData.append('sessionId', sessionId);
+      if (user?.userId) {
+        formData.append('userId', user.userId);
+      }
 
       try {
         const res = await fetch('/api/upload-audio', { method: 'POST', body: formData });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error);
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error);
 
-        parts.push({ type: 'file', mediaType: 'audio/wav', url: data.url });
+        parts.push({ type: 'file', mediaType: 'audio/wav', url: json.data.url });
       } catch (err) {
         console.error('Audio upload failed:', err);
         alert('Audio upload failed. Please try again.');
@@ -124,6 +122,13 @@ export default function Home() {
       <div className="relative z-10 flex flex-col items-center space-y-6 text-center max-w-3xl w-full flex-1 min-h-0 pt-4">
         {/* Header */}
         <header className="space-y-4 shrink-0 relative w-full">
+          <Link
+            href="/"
+            className="absolute left-0 top-0 flex items-center gap-1 rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-400 hover:text-white hover:border-zinc-500 transition"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            返回首頁
+          </Link>
           {user && (
             <button
               onClick={logout}

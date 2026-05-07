@@ -15,7 +15,7 @@ const google = createGoogleGenerativeAI({
 export const maxDuration = 60;
 
 const handler = async (req: Request) => {
-  const { messages }: { messages: Array<UIMessage> } = await req.json();
+  const { messages, userId }: { messages: Array<UIMessage>; userId?: string } = await req.json();
 
   // Inject audio file URLs as text so the model knows the real URL for the recognizeSong tool
   const augmentedMessages = messages.map((msg) => {
@@ -47,13 +47,15 @@ const handler = async (req: Request) => {
       - 呼叫 searchYouTubeVideos 後，避免重複開場句；請用 1-2 句簡短說明即可，影片清單由介面卡片呈現，不要再用長段落重複列出。
       - 將搜尋結果整理後告訴使用者你辨識到的歌曲，並請使用者確認。
       - 確認歌曲後，針對該錄音分析音準、音色、氣息支撐與共鳴，給予具體且有建設性的回饋。
+      - 分析完成後，請使用 uploadScore 工具為使用者的演唱評分。你應該評估以下三個項目（每項 0-50 分）：rhythm（節奏）、expression（情感表達）、technique（技巧）。每個維度呼叫一次 uploadScore。
+      - 評分時請根據實際聽到的表現給出合理分數，並附上簡短理由。
       - 提供可執行的發聲練習來改善使用者的演唱技巧。
       - 語氣溫暖、鼓勵、有耐心，像對待認真的學生一樣。
       - 練習步驟請用清楚的格式列出。
       - 全程使用繁體中文回覆。
     `,
     messages: await convertToModelMessages(augmentedMessages),
-    tools: { ...makeTools() },
+    tools: { ...makeTools(userId) },
     stopWhen: stepCountIs(7),
     experimental_telemetry: { isEnabled: isLangfuseEnabled },
     ...(isLangfuseEnabled && {

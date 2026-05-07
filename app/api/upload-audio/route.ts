@@ -5,17 +5,19 @@ import { AUDIO_BUCKET, supabase } from '@/lib/supabase';
 export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const file = formData.get('file') as File | null;
-    const sessionId = formData.get('sessionId') as string | null;
+    const userId = formData.get('userId') as string | null;
+    const durationSeconds = formData.get('durationSeconds') as string | null;
 
     if (!file) {
         return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
-    if (!sessionId) {
-        return NextResponse.json({ error: 'No sessionId provided' }, { status: 400 });
+    if (!userId) {
+        return NextResponse.json({ error: 'No userId provided' }, { status: 400 });
     }
 
-    const ext = file.name.split('.').pop() ?? 'webm';
-    const storagePath = `${sessionId}/${crypto.randomUUID()}.${ext}`;
+    const recordingId = crypto.randomUUID();
+    const ext = file.name.split('.').pop() ?? 'wav';
+    const storagePath = `${userId}/${recordingId}.${ext}`;
 
     // Upload to Supabase Storage
     const buffer = Buffer.from(await file.arrayBuffer());
@@ -40,11 +42,12 @@ export async function POST(req: NextRequest) {
 
     // Insert DB row
     const { error: dbError } = await supabase.from('recordings').insert({
-        session_id: sessionId,
+        user_id: userId,
         storage_path: storagePath,
         public_url: publicUrl,
         file_size: file.size,
         mime_type: file.type,
+        duration_seconds: durationSeconds ? parseFloat(durationSeconds) : null,
     });
 
     if (dbError) {
@@ -53,7 +56,10 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({
-        url: publicUrl,
-        storagePath,
+        data: {
+            recordingId,
+            url: publicUrl,
+            storagePath,
+        },
     });
 }
