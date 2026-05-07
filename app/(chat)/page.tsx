@@ -115,7 +115,7 @@ export default function Home() {
       {/* Background gradient */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none" />
 
-      <div className="relative z-10 flex flex-col items-center space-y-6 text-center max-w-3xl w-full flex-grow pt-4">
+      <div className="relative z-10 flex flex-col items-center space-y-6 text-center max-w-3xl w-full flex-1 min-h-0 pt-4">
         {/* Header */}
         <header className="space-y-4 shrink-0">
           <div className="inline-flex items-center justify-center p-3 bg-zinc-900 border border-zinc-800 rounded-2xl mb-2 shadow-xl">
@@ -128,7 +128,7 @@ export default function Home() {
         </header>
 
         {/* Messages */}
-        <div className="flex-1 w-full overflow-y-auto space-y-4 p-4 text-left font-medium max-h-[50vh]">
+        <div className="flex-1 min-h-0 w-full overflow-y-auto space-y-4 p-4 text-left font-medium">
           <ChatMessages messages={messages as any} isLoading={isLoading} uploadProgress={uploadProgress} />
         </div>
       </div>

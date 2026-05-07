@@ -35,7 +35,7 @@ const handler = async (req: Request) => {
 
   const result = streamText({
     maxRetries: 0,
-    model: google('gemini-2.5-flash-lite'),
+    model: google('gemini-2.5-flash'),
     providerOptions: {
       google: { thinkingConfig: { includeThoughts: false } },
     },
