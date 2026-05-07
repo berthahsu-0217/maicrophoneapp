@@ -54,7 +54,7 @@ const handler = async (req: Request) => {
     `,
     messages: await convertToModelMessages(augmentedMessages),
     tools: { ...makeTools() },
-    stopWhen: stepCountIs(5),
+    stopWhen: stepCountIs(7),
     experimental_telemetry: { isEnabled: isLangfuseEnabled },
     ...(isLangfuseEnabled && {
       onFinish: async () => {
