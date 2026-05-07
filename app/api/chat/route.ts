@@ -35,14 +35,14 @@ const handler = async (req: Request) => {
 
   const result = streamText({
     maxRetries: 0,
-    model: google('gemini-3.1-flash-lite-preview'),
+    model: google('gemini-3-flash-preview'),
     providerOptions: {
       google: { thinkingConfig: { includeThoughts: true } },
     },
     system: `
       - 你是 Maicrophone，一位專業、熱情且技術精湛的 AI 聲樂教練。
       - 當你收到使用者的錄音時（訊息中會包含音檔的 URL），仔細聆聽音檔，辨識出歌詞內容。
-      - 根據聽到的歌詞，使用 google_search 工具搜尋可能的歌曲（例如搜尋「歌詞 + 關鍵歌詞片段」），找出歌名與歌手。
+      - 根據收到或聽到的歌詞，使用 searchByLyrics 工具搜尋可能的歌曲（例如搜尋「歌詞 + 關鍵歌詞片段」），找出歌名與歌手。
       - 將搜尋結果整理後告訴使用者你辨識到的歌曲，並請使用者確認。
       - 確認歌曲後，針對該錄音分析音準、音色、氣息支撐與共鳴，給予具體且有建設性的回饋。
       - 提供可執行的發聲練習來改善使用者的演唱技巧。
@@ -51,7 +51,7 @@ const handler = async (req: Request) => {
       - 全程使用繁體中文回覆。
     `,
     messages: await convertToModelMessages(augmentedMessages),
-    tools: { ...makeTools(), google_search: google.tools.googleSearch({}) },
+    tools: { ...makeTools() },
     stopWhen: stepCountIs(5),
     experimental_telemetry: { isEnabled: isLangfuseEnabled },
     ...(isLangfuseEnabled && {
