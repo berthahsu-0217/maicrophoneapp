@@ -11,8 +11,8 @@ const google = createGoogleGenerativeAI({
   apiKey: process.env.GOOGLE_GENERATIVE_AI_KEY,
 });
 
-// Allow streaming responses up to 60 seconds (agent loops need more time)
-export const maxDuration = 60;
+// Allow streaming responses up to 120 seconds (agent loops need more time)
+export const maxDuration = 120;
 
 const handler = async (req: Request) => {
   const { messages, userId, challengeId }: { messages: Array<UIMessage>; userId?: string; challengeId: string } = await req.json();
@@ -35,6 +35,15 @@ const handler = async (req: Request) => {
     };
   });
 
+  const convertedMessages = await convertToModelMessages(augmentedMessages);
+
+  console.log(`[chat] request`, {
+    challengeId,
+    userId,
+    messageCount: messages.length,
+    lastMessage: JSON.stringify(messages[messages.length - 1]?.parts?.map((p: any) => ({ type: p.type, text: p.text?.slice(0, 80), url: p.url }))),
+  });
+
   const result = streamText({
     maxRetries: 0,
     model: google('gemini-2.5-flash'),
@@ -44,16 +53,35 @@ const handler = async (req: Request) => {
     system: challenge.system,
     messages: await convertToModelMessages(augmentedMessages),
     tools: challenge.tools(userId),
-    stopWhen: stepCountIs(7),
+    stopWhen: stepCountIs(10),
     experimental_telemetry: { isEnabled: isLangfuseEnabled },
-    ...(isLangfuseEnabled && {
-      onFinish: async () => {
-        trace.getActiveSpan()?.end();
-      },
-      onError: async () => {
-        trace.getActiveSpan()?.end();
-      },
-    }),
+    onStepFinish: (event) => {
+      const { toolCalls, toolResults, text, finishReason, usage } = event;
+      console.log(`[chat] step finished`, {
+        challengeId,
+        userId,
+        finishReason,
+        usage,
+        toolCalls: toolCalls?.map((tc: any) => ({ name: tc.toolName, args: tc.args })),
+        toolResults: toolResults?.map((tr: any) => ({ name: tr.toolName, result: tr.result })),
+        textLength: text?.length ?? 0,
+      });
+    },
+    onFinish: async ({ finishReason, steps, text, usage }) => {
+      console.log(`[chat] stream finished`, {
+        challengeId,
+        userId,
+        finishReason,
+        totalSteps: steps.length,
+        textLength: text?.length ?? 0,
+        usage,
+      });
+      if (isLangfuseEnabled) trace.getActiveSpan()?.end();
+    },
+    onError: async ({ error }) => {
+      console.error(`[chat] stream error`, { challengeId, userId, error });
+      if (isLangfuseEnabled) trace.getActiveSpan()?.end();
+    },
   });
 
   if (isLangfuseEnabled) {

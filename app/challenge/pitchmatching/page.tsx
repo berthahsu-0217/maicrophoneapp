@@ -4,12 +4,14 @@ import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
 import { ArrowLeft, LogOut, Music } from 'lucide-react';
 import Link from 'next/link';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { ChatInputBar } from '@/components/chat-input-bar';
 import { ChatMessages } from '@/components/chat-messages';
+import { PitchVisualizer } from '@/components/pitch-visualizer';
 import { useAudioRecorder } from '@/hooks/use-audio-recorder';
 import { useAuth } from '@/hooks/use-auth';
+import { usePitchDetection } from '@/hooks/use-pitch-detection';
 import { useSpeechToText } from '@/hooks/use-speech-to-text';
 import { getUser, logout } from '@/lib/auth';
 
@@ -26,10 +28,30 @@ export default function DoReMiChallenge() {
     const [uploadProgress, setUploadProgress] = useState<string | null>(null);
     const isLoading = !!uploadProgress || status === 'submitted' || status === 'streaming';
 
+    // ─── Extract latest target notes from AI messages ───
+    const NOTE_ARRAY_RE = /\[\s*"[A-Ga-g][#b]?\d"(?:\s*,\s*"[A-Ga-g][#b]?\d")*\s*\]/;
+    const targetNotes = useMemo(() => {
+        for (let i = messages.length - 1; i >= 0; i--) {
+            const m = messages[i];
+            if (m.role !== 'assistant' || !Array.isArray(m.parts)) continue;
+            for (const p of m.parts) {
+                if ((p as any).type === 'text' && typeof (p as any).text === 'string') {
+                    const match = (p as any).text.match(NOTE_ARRAY_RE);
+                    if (match) {
+                        try { return JSON.parse(match[0]) as string[]; } catch { /* ignore */ }
+                    }
+                }
+            }
+        }
+        return [] as string[];
+    }, [messages]);
+
     // ─── Hooks ───
     const { isListening, stop: stopListening, toggle: toggleListening } = useSpeechToText(
         useCallback((transcript: string) => setInput(transcript), []),
     );
+
+    const { pitch, attach, detach } = usePitchDetection();
 
     const {
         isRecording,
@@ -38,7 +60,10 @@ export default function DoReMiChallenge() {
         startRecording,
         stopRecording,
         clearAttachment,
-    } = useAudioRecorder();
+    } = useAudioRecorder({
+        onWorkletReady: attach,
+        onRecordingStop: detach,
+    });
 
     // ─── Submit handler ───
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -91,7 +116,7 @@ export default function DoReMiChallenge() {
             setUploadProgress('Analyzing audio…');
 
             if (!parts.some((p) => p.type === 'text' && p.text?.trim())) {
-                parts.unshift({ type: 'text', text: '' });
+                parts.unshift({ type: 'text', text: '這是我的錄音，請幫我分析！' });
             }
         }
         sendMessage({ role: 'user', parts: parts as any });
@@ -142,6 +167,9 @@ export default function DoReMiChallenge() {
                     <ChatMessages messages={messages as any} isLoading={isLoading} uploadProgress={uploadProgress} />
                 </div>
             </div>
+
+            {/* Pitch visualizer (real-time, only during recording) */}
+            <PitchVisualizer pitch={pitch} isRecording={isRecording} targetNotes={targetNotes} />
 
             {/* Input bar */}
             <ChatInputBar

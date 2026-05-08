@@ -19,7 +19,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  allowedDevOrigins: ['192.168.30.129'],
+  allowedDevOrigins: ['192.168.30.129', 'maicrophone.local'],
   output: 'standalone',
   transpilePackages: ['motion'],
   webpack: (config, { dev }) => {

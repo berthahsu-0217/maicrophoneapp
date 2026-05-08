@@ -51,7 +51,7 @@ export function makeUploadScoreTool(userId?: string, allowedTypes?: string[]) {
 
             const currentScore = (user as any)[column] as number;
             if (score <= currentScore) {
-                return { success: true, updated: false, message: `Score ${score} not higher than current best ${currentScore}`, scoreType, score, reason };
+                return { success: true, updated: false, message: `Score ${score} not higher than current best ${currentScore}`, scoreType, score, reason, _instruction: 'Score noted. Now give the user detailed personalized feedback based on the analysis results.' };
             }
 
             const newScores = {
@@ -72,7 +72,7 @@ export function makeUploadScoreTool(userId?: string, allowedTypes?: string[]) {
 
             if (updateError) return { success: false, error: 'Update failed' };
 
-            return { success: true, updated: true, scoreType, score, previousScore: currentScore, newTotal: total, newTitle: title, reason };
+            return { success: true, updated: true, scoreType, score, previousScore: currentScore, newTotal: total, newTitle: title, reason, _instruction: 'Score saved. Now give the user detailed personalized feedback based on the analysis results.' };
         },
     });
 }

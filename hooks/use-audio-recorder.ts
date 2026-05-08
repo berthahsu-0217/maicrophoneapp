@@ -8,10 +8,19 @@ export interface AudioAttachment {
   url: string;
 }
 
+export interface AudioRecorderOptions {
+  /** Called when the AudioWorkletNode is ready — use this to attach pitch detection. */
+  onWorkletReady?: (node: AudioWorkletNode, sampleRate: number) => void;
+  /** Called when recording stops. */
+  onRecordingStop?: () => void;
+}
+
 /**
  * Hook that records audio from the microphone and produces a WAV blob.
  */
-export function useAudioRecorder() {
+export function useAudioRecorder(options?: AudioRecorderOptions) {
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [audioAttachment, setAudioAttachment] = useState<AudioAttachment | null>(null);
@@ -58,7 +67,9 @@ export function useAudioRecorder() {
 
       // Must connect through to destination so the browser processes audio
       source.connect(workletNode);
-      workletNode.connect(audioCtx.destination)
+      workletNode.connect(audioCtx.destination);
+
+      optionsRef.current?.onWorkletReady?.(workletNode, audioCtx.sampleRate);
 
       setIsRecording(true);
       setRecordingTime(0);
@@ -103,6 +114,7 @@ export function useAudioRecorder() {
       timerRef.current = null;
     }
     setIsRecording(false);
+    optionsRef.current?.onRecordingStop?.();
   }, []);
 
   const clearAttachment = useCallback(() => {

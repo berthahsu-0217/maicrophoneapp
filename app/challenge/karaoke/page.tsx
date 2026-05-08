@@ -96,7 +96,7 @@ export default function Home() {
       setUploadProgress('Analyzing audio…');
 
       if (!parts.some((p) => p.type === 'text' && p.text?.trim())) {
-        parts.unshift({ type: 'text', text: '' });
+        parts.unshift({ type: 'text', text: '這是我的錄音，請幫我分析！' });
       }
       sendMessage({ role: 'user', parts: parts as any });
       setUploadProgress(null);
