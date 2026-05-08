@@ -20,7 +20,7 @@ export default function Home() {
 
   const { messages, sendMessage, setMessages, status } = useChat({
     transport: new DefaultChatTransport({
-      body: () => ({ userId: user?.userId ?? getUser()?.userId }),
+      body: () => ({ userId: user?.userId ?? getUser()?.userId, challengeId: 'karaoke' }),
     }),
   });
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);

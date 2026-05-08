@@ -25,7 +25,76 @@ function computeTitle(total: number): string {
     return (TITLES.find(([min]) => total >= min) ?? TITLES[TITLES.length - 1])[1];
 }
 
-export function makeTools(userId?: string) {
+// --- Shared tool: uploadScore ---
+function makeUploadScoreTool(userId?: string, allowedTypes?: string[]) {
+    return tool({
+        description:
+            'Upload a score for the user after analyzing their singing. Call this once per score dimension.',
+        inputSchema: z.object({
+            scoreType: z.enum(['pitch', 'rhythm', 'expression', 'technique', 'stability']).describe('Which dimension to score'),
+            score: z.number().int().min(0).max(50).describe('Score from 0-50 for this dimension'),
+            reason: z.string().describe('Brief reason for this score'),
+        }),
+        execute: async ({ scoreType, score, reason }) => {
+            if (allowedTypes && !allowedTypes.includes(scoreType)) {
+                return { success: false, error: `scoreType '${scoreType}' not allowed for this challenge` };
+            }
+            if (!userId) return { success: false, error: 'No userId provided' };
+
+            const column = SCORE_COLUMNS[scoreType];
+            if (!column) return { success: false, error: 'Invalid scoreType' };
+
+            const { data: user, error: fetchError } = await supabase
+                .from('users')
+                .select('score_pitch, score_rhythm, score_expression, score_technique, score_stability')
+                .eq('id', userId)
+                .single() as { data: any; error: any };
+
+            if (fetchError || !user) return { success: false, error: 'User not found' };
+
+            const currentScore = (user as any)[column] as number;
+            if (score <= currentScore) {
+                return { success: true, updated: false, message: `Score ${score} not higher than current best ${currentScore}`, scoreType, score, reason };
+            }
+
+            const newScores = {
+                score_pitch: user.score_pitch,
+                score_rhythm: user.score_rhythm,
+                score_expression: user.score_expression,
+                score_technique: user.score_technique,
+                score_stability: user.score_stability,
+                [column]: score,
+            };
+            const total = Object.values(newScores).reduce((a, b) => a + b, 0);
+            const title = computeTitle(total);
+
+            const { error: updateError } = await supabase
+                .from('users')
+                .update({ [column]: score, title, updated_at: new Date().toISOString() })
+                .eq('id', userId);
+
+            if (updateError) return { success: false, error: 'Update failed' };
+
+            return { success: true, updated: true, scoreType, score, previousScore: currentScore, newTotal: total, newTitle: title, reason };
+        },
+    });
+}
+
+// --- Per-challenge tool sets ---
+
+export function makePitchMatchingTools(userId?: string) {
+    return {
+        uploadScore: makeUploadScoreTool(userId, ['pitch']),
+    };
+}
+
+export function makeLongToneTools(userId?: string) {
+    return {
+        uploadScore: makeUploadScoreTool(userId, ['stability']),
+    };
+}
+
+export function makeKaraokeTools(userId?: string) {
     const executeYouTubeSearch = async ({ query, maxResults = 3 }: { query: string; maxResults?: number }) => {
         const apiKey = process.env.YOUTUBE_API_KEY;
         if (!apiKey) {
@@ -141,55 +210,6 @@ export function makeTools(userId?: string) {
             }),
             execute: executeYouTubeSearch,
         }),
-        uploadScore: tool({
-            description:
-                'Upload a score for the user after analyzing their singing. Call this once per score dimension. Only call after you have analyzed an audio recording.',
-            inputSchema: z.object({
-                scoreType: z.enum(['pitch', 'rhythm', 'expression', 'technique', 'stability']).describe('Which dimension to score'),
-                score: z.number().int().min(0).max(50).describe('Score from 0-50 for this dimension'),
-                reason: z.string().describe('Brief reason for this score'),
-            }),
-            execute: async ({ scoreType, score, reason }) => {
-                if (!userId) return { success: false, error: 'No userId provided' };
-
-                const column = SCORE_COLUMNS[scoreType];
-                if (!column) return { success: false, error: 'Invalid scoreType' };
-
-                // Get current score
-                const { data: user, error: fetchError } = await supabase
-                    .from('users')
-                    .select('score_pitch, score_rhythm, score_expression, score_technique, score_stability')
-                    .eq('id', userId)
-                    .single() as { data: any; error: any };
-
-                if (fetchError || !user) return { success: false, error: 'User not found' };
-
-                const currentScore = (user as any)[column] as number;
-                if (score <= currentScore) {
-                    return { success: true, updated: false, message: `Score ${score} not higher than current best ${currentScore}`, scoreType, score, reason };
-                }
-
-                // Calculate new total for title
-                const newScores = {
-                    score_pitch: user.score_pitch,
-                    score_rhythm: user.score_rhythm,
-                    score_expression: user.score_expression,
-                    score_technique: user.score_technique,
-                    score_stability: user.score_stability,
-                    [column]: score,
-                };
-                const total = Object.values(newScores).reduce((a, b) => a + b, 0);
-                const title = computeTitle(total);
-
-                const { error: updateError } = await supabase
-                    .from('users')
-                    .update({ [column]: score, title, updated_at: new Date().toISOString() })
-                    .eq('id', userId);
-
-                if (updateError) return { success: false, error: 'Update failed' };
-
-                return { success: true, updated: true, scoreType, score, previousScore: currentScore, newTotal: total, newTitle: title, reason };
-            },
-        }),
+        uploadScore: makeUploadScoreTool(userId, ['rhythm', 'expression', 'technique']),
     };
 }
