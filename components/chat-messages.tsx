@@ -1,6 +1,11 @@
+import { NotePlayer } from '@/components/note-player';
 import { FileAudio, Search } from 'lucide-react';
 
+
 const YOUTUBE_VIDEO_ID_RE = /^[a-zA-Z0-9_-]{11}$/;
+
+/** Regex to detect a JSON array of musical notes (e.g. ["C4", "E4", "G4"]) */
+const NOTE_ARRAY_RE = /\[\s*"[A-Ga-g][#b]?\d"(?:\s*,\s*"[A-Ga-g][#b]?\d")*\s*\]/;
 
 interface YouTubeVideoResult {
     videoId: string;
@@ -118,11 +123,65 @@ export function ChatMessages({ messages, isLoading, uploadProgress }: ChatMessag
                                             <pre className="mt-1 whitespace-pre-wrap text-zinc-500 text-xs leading-relaxed">{p.text}</pre>
                                         </details>
                                     );
-                                    if (p.type === 'text') return <span key={i}>{p.text}</span>;
+                                    if (p.type === 'text') {
+                                        // Detect note arrays in text and render NotePlayer
+                                        const text = p.text ?? '';
+                                        const match = text.match(NOTE_ARRAY_RE);
+                                        if (match) {
+                                            try {
+                                                const startIdx = text.indexOf(match[0]);
+                                                const before = text.slice(0, startIdx).trim();
+                                                const after = text.slice(startIdx + match[0].length).trim();
+                                                const notes: string[] = JSON.parse(match[0]);
+                                                return (
+                                                    <div key={i}>
+                                                        {before && <span>{before}</span>}
+                                                        <NotePlayer notes={notes} />
+                                                        {after && <span className="block mt-2">{after}</span>}
+                                                    </div>
+                                                );
+                                            } catch { /* fall through to plain text */ }
+                                        }
+                                        return <span key={i}>{text}</span>;
+                                    }
                                     const toolPayload = getToolPayload(p);
                                     if (toolPayload) {
                                         const { toolName, state, result } = toolPayload;
                                         const normalizedToolName = toolName.toLowerCase();
+
+                                        if (normalizedToolName === 'analyzepitch' && state === 'result' && result != null) {
+                                            const pitchResult = result as { results?: Array<{ target: string; detected: string | null; centsOff: number; hit: boolean; noteScore: number; label: string }>; score?: number };
+                                            if (pitchResult.results) {
+                                                return (
+                                                    <div key={i} className="mt-2 space-y-2">
+                                                        <div className="flex items-center gap-2 text-sm font-semibold text-pink-300">
+                                                            <Target className="w-4 h-4" />
+                                                            音準分析結果
+                                                        </div>
+                                                        <div className="space-y-1.5">
+                                                            {pitchResult.results.map((r, j) => {
+                                                                const colors = {
+                                                                    excellent: 'text-green-400 border-green-500/30 bg-green-500/10',
+                                                                    good: 'text-blue-400 border-blue-500/30 bg-blue-500/10',
+                                                                    fair: 'text-yellow-400 border-yellow-500/30 bg-yellow-500/10',
+                                                                    miss: 'text-red-400 border-red-500/30 bg-red-500/10',
+                                                                    undetected: 'text-zinc-500 border-zinc-600/30 bg-zinc-700/10',
+                                                                }[r.label] ?? 'text-zinc-400 border-zinc-600/30';
+                                                                return (
+                                                                    <div key={j} className={`flex items-center justify-between px-3 py-1.5 rounded-lg border text-xs font-mono ${colors}`}>
+                                                                        <span>🎵 {r.target} → {r.detected ?? '—'}</span>
+                                                                        <span>{r.noteScore}/10 ({r.label}{r.detected ? `, ${r.centsOff > 0 ? '+' : ''}${r.centsOff}¢` : ''})</span>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                        <div className="text-right text-sm font-bold text-pink-300">
+                                                            總分：{pitchResult.score} / 50
+                                                        </div>
+                                                    </div>
+                                                );
+                                            }
+                                        }
 
                                         if ((normalizedToolName === 'searchyoutubevideos') && result != null) {
                                             const videos = extractYouTubeVideos(result);

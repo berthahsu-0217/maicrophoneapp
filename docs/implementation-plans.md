@@ -63,8 +63,20 @@
 
 ---
 
-## Phase 6：Placeholder 關卡
+## Phase 6: 第一關（魔法少女 Do Re Mi）音準挑戰
+
+### 後端
+- [x] 在 `lib/tools.ts` 新增 `analyzePitch` tool：下載 WAV、用 pitchy 偵測音高、對齊目標音符、計算分數。
+- [x] 建立 `prompts/pitchmatching.md` system prompt，定義 agent 工作流程（詢問偏好→產生音符→分析錄音→回饋評分）。
 
 ### 前端
-- [ ] 第一關（魔法少女Do Re Mi）placeholder 頁面：顯示關卡標題、說明文字、「敬請期待」。
+- [x] 建立 `app/challenge/doremi/page.tsx` 關卡頁面（chat-based 介面，challengeId='pitchmatching'）。
+- [x] 建立 `components/note-player.tsx` 音符卡片元件，透過 Tone.js 播放音符。
+- [x] 更新 `components/chat-messages.tsx`：偵測 agent 回傳的音符陣列並渲染 NotePlayer；渲染 `analyzePitch` 結果卡片。
+
+---
+
+## Phase 7：Placeholder 關卡
+
+### 前端
 - [ ] 第二關（一口氣到底）placeholder 頁面：顯示關卡標題、說明文字、「敬請期待」。

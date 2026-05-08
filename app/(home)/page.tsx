@@ -32,7 +32,7 @@ const challenges = [
         title: '魔法少女Do Re Mi',
         subtitle: '音準挑戰',
         icon: Music,
-        href: '/challenge/doremi',
+        href: '/challenge/pitchmatching',
         color: 'from-pink-500 to-rose-600',
     },
     {
