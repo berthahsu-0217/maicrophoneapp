@@ -39,7 +39,7 @@ const challenges = [
         title: '一口氣到底',
         subtitle: '氣息控制挑戰',
         icon: Wind,
-        href: '/challenge/breath',
+        href: '/challenge/longtone',
         color: 'from-cyan-500 to-blue-600',
     },
     {

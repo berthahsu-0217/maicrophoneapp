@@ -76,7 +76,23 @@
 
 ---
 
-## Phase 7：Placeholder 關卡
+## Phase 7：第二關（一口氣到底）氣息控制挑戰
+
+### 後端
+- [ ] 在 `lib/tools/long-tone.ts` 實作 4 個分析 tool：
+  - [ ] `analyzeCleanDuration`：下載 WAV → Meyda 離線擷取 RMS + ZCR + Spectral Flatness → 逐 frame 判定 clean/breathy/silence → 計算有效持續時長與分數，附帶逐秒 timeline。
+  - [ ] `analyzePitchStability`：下載 WAV → Pitchy 偵測每 frame 頻率 → 計算與目標音符的 cents 偏差 mean & std → 分數，附帶逐秒 timeline。
+  - [ ] `analyzeToneQuality`：Meyda 離線擷取 Spectral Flatness + Spectral Slope → 計算平均值與氣音退化起始秒數 → 分數，附帶 timeline。
+  - [ ] `analyzeVolumeSteadiness`：Meyda 離線擷取 RMS → 計算變異係數 (CV)、偵測衰減趨勢 → 分數，附帶 timeline。
+- [ ] 建立 `prompts/longtone.md` system prompt，定義 agent 工作流程（詢問偏好→產生目標音符→依序呼叫 4 tool→時間軸回饋→uploadScore）。
+- [ ] 在 `lib/tools/index.ts` 註冊 4 個 long-tone tool 至 challenge route。
 
 ### 前端
-- [ ] 第二關（一口氣到底）placeholder 頁面：顯示關卡標題、說明文字、「敬請期待」。
+- [ ] 建立 `app/challenge/longtone/page.tsx` 關卡頁面（chat-based 介面，challengeId='longtone'）。
+- [ ] 建立即時 Meyda 分析 hook `hooks/use-meyda.ts`：錄音期間即時擷取 RMS、Spectral Flatness、Chroma，透過 Web Audio API AnalyserNode 串接 Meyda。
+- [ ] 建立即時回饋面板元件 `components/longtone-visualizer.tsx`：
+  - [ ] 即時音高指示器（目前音高 vs 目標，偏高/偏低箭頭）。
+  - [ ] RMS 音量即時折線圖。
+  - [ ] 氣息品質指示燈（Spectral Flatness → 綠/黃/紅）。
+  - [ ] 持續秒數計時器。
+- [ ] 更新 `components/chat-messages.tsx`：渲染 4 個 tool 結果卡片（含 timeline 視覺化）。

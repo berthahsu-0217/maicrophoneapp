@@ -144,7 +144,84 @@ Agent 工作流程：
 - 5 個音符加總，滿分 50 分。
 
 ### 第二關：氣息控制挑戰
-MVP 先作為 placeholder 頁面，僅顯示關卡標題與說明文字，無實際功能。
+
+任務說明：Agent 給使用者一個目標音符，使用者盡可能穩定、持久地唱出該音。系統透過 Meyda 與 Pitchy 即時分析音訊特徵，評估氣息控制能力。
+
+評分重點（滿分 50 分，四個維度）：
+
+| 維度 | 滿分 | 使用的 Meyda / Pitchy 特徵 | 說明 |
+|------|------|---------------------------|------|
+| Clean Duration（有效持續時長） | 15 | RMS + ZCR + Spectral Flatness | 計算「乾淨有聲」的總秒數（排除靜音、氣音、雜訊段）。<3s=5, 3-5s=10, 5-8s=13, >8s=15 |
+| Pitch Stability（音準穩定度） | 15 | Pitchy（cents 偏差）+ Chroma | 計算所有有聲 frame 與目標音符的 cents 偏差標準差。std<8=15, <15=12, <25=8, <40=5, ≥40=2 |
+| Tone Quality（音色品質） | 10 | Spectral Flatness + Spectral Slope | 衡量氣息音與純淨音的比例。Spectral Flatness 越低=越乾淨=分數越高；Spectral Slope 偵測嘶聲/氣音退化。 |
+| Volume Steadiness（音量穩定度） | 10 | RMS variance (或 Bark Loudness variance) | 計算有聲段 RMS 的變異係數 (CV)。CV<0.1=10, <0.2=8, <0.3=5, ≥0.3=2 |
+
+技術選型：
+- **Meyda**（前端即時 + 後端離線分析）：擷取 RMS、Spectral Flatness、Spectral Flux、Spectral Slope、ZCR、Loudness、Chroma 等特徵。
+- **Pitchy**（後端 `analyzeLongTone` tool）：精確偵測每個 frame 的頻率與 cents 偏差。
+- **Tone.js**（前端）：播放目標音符供使用者聆聽。
+
+UI 內容：
+- 聊天視窗（與其他關卡相同的 chat-based 介面）。
+- Agent 回傳目標音符時，前端渲染音符卡片與「播放」按鈕（複用 NotePlayer 元件）。
+- **即時視覺回饋面板**：錄音期間顯示 Meyda 即時分析結果：
+  - 即時音高指示器（目前音高 vs 目標音符，偏高/偏低箭頭）。
+  - RMS 音量曲線（即時折線圖，理想為水平線）。
+  - 氣息品質指示燈（Spectral Flatness 映射為綠/黃/紅，綠=乾淨、紅=氣音過重）。
+  - 已持續秒數計時器。
+
+Agent 工作流程：
+1. 使用者進入關卡，Agent 先問第一個問題——**音域**：「你的聲音比較高還是低？」（高/中/低）。
+2. Agent 再問第二個問題——**發聲方式**：「想用哪種方式練習？Ah（開口）、Oo（圓唇）、還是 Hmm（哼唱）？」
+   - **Ah**（開口）：喉嚨打開，最容易入門，適合初學者。
+   - **Oo**（圓唇）：需要集中氣流，測試嘴型控制力，中等難度。
+   - **Hmm**（哼唱）：閉口哼唱，氣息控制最容易但音色分析門檻不同。
+3. Agent 根據兩項偏好選擇 1 個目標音符（低音域→A3、中音域→E4、高音域→A4），並將音符與發聲方式以結構化格式回傳（如 `{ "note": "E4", "vowel": "Oo" }`）。
+4. 前端渲染音符卡片（含發聲方式提示）並透過 Tone.js 播放目標音符供使用者聆聽。
+5. 使用者開始錄音，前端啟動 Meyda real-time extraction 並顯示即時回饋面板。
+5. 使用者結束錄音，前端上傳 WAV 音檔後將 public URL 傳入 chat。
+6. Agent 依序呼叫 4 個分析 tool：
+   - `analyzeCleanDuration({ targetNote, audioUrl })` → 回傳 `{ cleanDurationSeconds, totalDurationSeconds, score, timeline }` 
+   - `analyzePitchStability({ targetNote, audioUrl })` → 回傳 `{ meanCentsOff, stdCentsOff, score, timeline }` 
+   - `analyzeToneQuality({ audioUrl })` → 回傳 `{ avgSpectralFlatness, avgSpectralSlope, breathinessOnsetSecond, score, timeline }` 
+   - `analyzeVolumeSteadiness({ audioUrl })` → 回傳 `{ rmsCV, rmsMean, rmsStd, decayDetected, score, timeline }` 
+7. 每個 tool 回傳結果中包含 `timeline` 陣列（每秒一筆摘要），供 Agent 產生**時間軸回饋**。
+8. Agent 根據四項結果給予個人化回饋，例如：
+   - 「你的音色在前 6 秒非常乾淨，但第 7 秒開始變得氣音很重——試試在氣快用完前換氣。」
+   - 「音量在第 4 秒有明顯下降，練習腹式呼吸可以幫助維持穩定氣流。」
+9. Agent 呼叫 `uploadScore({ scoreType: "stability", score: totalScore })` 將四項加總的總分寫入 DB。
+10. 使用者可再次挑戰或回首頁。
+
+Tool 回傳範例（`analyzeCleanDuration`）：
+```json
+{
+  "cleanDurationSeconds": 7.2,
+  "totalDurationSeconds": 9.5,
+  "score": 13,
+  "timeline": [
+    { "second": 1, "status": "clean" },
+    { "second": 2, "status": "clean" },
+    { "second": 7, "status": "clean" },
+    { "second": 8, "status": "breathy" },
+    { "second": 9, "status": "silence" }
+  ]
+}
+```
+
+Tool 回傳範例（`analyzePitchStability`）：
+```json
+{
+  "targetNote": "G4",
+  "meanCentsOff": 3.2,
+  "stdCentsOff": 11.5,
+  "score": 12,
+  "timeline": [
+    { "second": 1, "centsOff": 2, "note": "G4" },
+    { "second": 5, "centsOff": -18, "note": "F#4" },
+    { "second": 8, "centsOff": 45, "note": "A4" }
+  ]
+}
+```
 
 ### 第三關：歌曲表現分析
 

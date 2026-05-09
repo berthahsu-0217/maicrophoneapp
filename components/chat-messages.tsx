@@ -1,11 +1,14 @@
 import { NotePlayer } from '@/components/note-player';
-import { FileAudio, Search } from 'lucide-react';
+import { Activity, FileAudio, Music, Search, Target, Volume2, Wind } from 'lucide-react';
 
 
 const YOUTUBE_VIDEO_ID_RE = /^[a-zA-Z0-9_-]{11}$/;
 
 /** Regex to detect a JSON array of musical notes (e.g. ["C4", "E4", "G4"]) */
 const NOTE_ARRAY_RE = /\[\s*"[A-Ga-g][#b]?\d"(?:\s*,\s*"[A-Ga-g][#b]?\d")*\s*\]/;
+
+/** Regex to detect a longtone target note JSON (e.g. {"note": "E4", "vowel": "Ah"}) */
+const LONGTONE_TARGET_RE = /\{\s*"note"\s*:\s*"([A-Ga-g]#?\d)"\s*,\s*"vowel"\s*:\s*"(\w+)"\s*\}/;
 
 interface YouTubeVideoResult {
     videoId: string;
@@ -124,8 +127,27 @@ export function ChatMessages({ messages, isLoading, uploadProgress }: ChatMessag
                                         </details>
                                     );
                                     if (p.type === 'text') {
-                                        // Detect note arrays in text and render NotePlayer
                                         const text = p.text ?? '';
+
+                                        // Detect longtone target note JSON
+                                        const longtoneMatch = text.match(LONGTONE_TARGET_RE);
+                                        if (longtoneMatch) {
+                                            const startIdx = text.indexOf(longtoneMatch[0]);
+                                            const before = text.slice(0, startIdx).trim();
+                                            const after = text.slice(startIdx + longtoneMatch[0].length).trim();
+                                            const note = longtoneMatch[1];
+                                            const vowel = longtoneMatch[2];
+                                            return (
+                                                <div key={i}>
+                                                    {before && <span className="block mb-2">{before}</span>}
+                                                    <NotePlayer notes={[note]} />
+                                                    <div className="mt-1 text-xs text-zinc-400">發聲方式：{vowel}</div>
+                                                    {after && <span className="block mt-2">{after}</span>}
+                                                </div>
+                                            );
+                                        }
+
+                                        // Detect note arrays in text and render NotePlayer
                                         const match = text.match(NOTE_ARRAY_RE);
                                         if (match) {
                                             try {
@@ -181,6 +203,136 @@ export function ChatMessages({ messages, isLoading, uploadProgress }: ChatMessag
                                                     </div>
                                                 );
                                             }
+                                        }
+
+                                        // ─── Long-tone tool results ───
+                                        if (normalizedToolName === 'analyzecleanduration' && state === 'result' && result != null) {
+                                            const r = result as { cleanDurationSeconds?: number; totalDurationSeconds?: number; score?: number; timeline?: Array<{ second: number; status: string }> };
+                                            return (
+                                                <div key={i} className="mt-2 space-y-2">
+                                                    <div className="flex items-center gap-2 text-sm font-semibold text-cyan-300">
+                                                        <Wind className="w-4 h-4" />
+                                                        有效持續時長分析
+                                                    </div>
+                                                    <div className="grid grid-cols-3 gap-2 text-xs">
+                                                        <div className="bg-zinc-800/60 rounded-lg p-2 text-center">
+                                                            <div className="text-zinc-500">乾淨時長</div>
+                                                            <div className="text-lg font-bold text-cyan-400">{r.cleanDurationSeconds}s</div>
+                                                        </div>
+                                                        <div className="bg-zinc-800/60 rounded-lg p-2 text-center">
+                                                            <div className="text-zinc-500">總時長</div>
+                                                            <div className="text-lg font-bold text-zinc-300">{r.totalDurationSeconds}s</div>
+                                                        </div>
+                                                        <div className="bg-zinc-800/60 rounded-lg p-2 text-center">
+                                                            <div className="text-zinc-500">得分</div>
+                                                            <div className="text-lg font-bold text-cyan-400">{r.score}/15</div>
+                                                        </div>
+                                                    </div>
+                                                    {r.timeline && r.timeline.length > 0 && (
+                                                        <div className="flex gap-1 flex-wrap">
+                                                            {r.timeline.map((t, j) => {
+                                                                const color = t.status === 'clean' ? 'bg-green-500/70' : t.status === 'breathy' ? 'bg-yellow-500/70' : 'bg-zinc-600/70';
+                                                                return <div key={j} className={`w-6 h-4 rounded text-[9px] flex items-center justify-center ${color}`}>{t.second}</div>;
+                                                            })}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        }
+
+                                        if (normalizedToolName === 'analyzepitchstability' && state === 'result' && result != null) {
+                                            const r = result as { targetNote?: string; meanCentsOff?: number; stdCentsOff?: number; score?: number };
+                                            return (
+                                                <div key={i} className="mt-2 space-y-2">
+                                                    <div className="flex items-center gap-2 text-sm font-semibold text-blue-300">
+                                                        <Activity className="w-4 h-4" />
+                                                        音準穩定度分析
+                                                    </div>
+                                                    <div className="grid grid-cols-3 gap-2 text-xs">
+                                                        <div className="bg-zinc-800/60 rounded-lg p-2 text-center">
+                                                            <div className="text-zinc-500">平均偏差</div>
+                                                            <div className="text-lg font-bold text-blue-400">{r.meanCentsOff}¢</div>
+                                                        </div>
+                                                        <div className="bg-zinc-800/60 rounded-lg p-2 text-center">
+                                                            <div className="text-zinc-500">標準差</div>
+                                                            <div className="text-lg font-bold text-blue-400">{r.stdCentsOff}¢</div>
+                                                        </div>
+                                                        <div className="bg-zinc-800/60 rounded-lg p-2 text-center">
+                                                            <div className="text-zinc-500">得分</div>
+                                                            <div className="text-lg font-bold text-blue-400">{r.score}/15</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+
+                                        if (normalizedToolName === 'analyzetonequality' && state === 'result' && result != null) {
+                                            const r = result as { avgSpectralFlatness?: number; breathinessOnsetSecond?: number | null; score?: number; timeline?: Array<{ second: number; quality: string }> };
+                                            return (
+                                                <div key={i} className="mt-2 space-y-2">
+                                                    <div className="flex items-center gap-2 text-sm font-semibold text-purple-300">
+                                                        <Music className="w-4 h-4" />
+                                                        音色品質分析
+                                                    </div>
+                                                    <div className="grid grid-cols-3 gap-2 text-xs">
+                                                        <div className="bg-zinc-800/60 rounded-lg p-2 text-center">
+                                                            <div className="text-zinc-500">氣息比</div>
+                                                            <div className="text-lg font-bold text-purple-400">{r.avgSpectralFlatness}</div>
+                                                        </div>
+                                                        <div className="bg-zinc-800/60 rounded-lg p-2 text-center">
+                                                            <div className="text-zinc-500">氣音起始</div>
+                                                            <div className="text-lg font-bold text-purple-400">{r.breathinessOnsetSecond ? `${r.breathinessOnsetSecond}s` : '無'}</div>
+                                                        </div>
+                                                        <div className="bg-zinc-800/60 rounded-lg p-2 text-center">
+                                                            <div className="text-zinc-500">得分</div>
+                                                            <div className="text-lg font-bold text-purple-400">{r.score}/10</div>
+                                                        </div>
+                                                    </div>
+                                                    {r.timeline && r.timeline.length > 0 && (
+                                                        <div className="flex gap-1 flex-wrap">
+                                                            {r.timeline.map((t, j) => {
+                                                                const color = t.quality === 'clean' ? 'bg-green-500/70' : t.quality === 'fair' ? 'bg-yellow-500/70' : 'bg-red-500/70';
+                                                                return <div key={j} className={`w-6 h-4 rounded text-[9px] flex items-center justify-center ${color}`}>{t.second}</div>;
+                                                            })}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        }
+
+                                        if (normalizedToolName === 'analyzevolumesteadiness' && state === 'result' && result != null) {
+                                            const r = result as { rmsCV?: number; decayDetected?: boolean; score?: number; timeline?: Array<{ second: number; rms: number }> };
+                                            const maxRms = r.timeline ? Math.max(...r.timeline.map((t) => t.rms), 0.001) : 1;
+                                            return (
+                                                <div key={i} className="mt-2 space-y-2">
+                                                    <div className="flex items-center gap-2 text-sm font-semibold text-amber-300">
+                                                        <Volume2 className="w-4 h-4" />
+                                                        音量穩定度分析
+                                                    </div>
+                                                    <div className="grid grid-cols-3 gap-2 text-xs">
+                                                        <div className="bg-zinc-800/60 rounded-lg p-2 text-center">
+                                                            <div className="text-zinc-500">變異係數</div>
+                                                            <div className="text-lg font-bold text-amber-400">{r.rmsCV}</div>
+                                                        </div>
+                                                        <div className="bg-zinc-800/60 rounded-lg p-2 text-center">
+                                                            <div className="text-zinc-500">衰減</div>
+                                                            <div className={`text-lg font-bold ${r.decayDetected ? 'text-red-400' : 'text-green-400'}`}>{r.decayDetected ? '有' : '無'}</div>
+                                                        </div>
+                                                        <div className="bg-zinc-800/60 rounded-lg p-2 text-center">
+                                                            <div className="text-zinc-500">得分</div>
+                                                            <div className="text-lg font-bold text-amber-400">{r.score}/10</div>
+                                                        </div>
+                                                    </div>
+                                                    {r.timeline && r.timeline.length > 1 && (
+                                                        <svg width="100%" height="32" viewBox="0 0 200 32" className="bg-zinc-800/50 rounded-lg" preserveAspectRatio="none">
+                                                            <polyline
+                                                                points={r.timeline.map((t, j) => `${(j / (r.timeline!.length - 1)) * 200},${32 - (t.rms / maxRms) * 28}`).join(' ')}
+                                                                fill="none" stroke="#fbbf24" strokeWidth="1.5" strokeLinejoin="round"
+                                                            />
+                                                        </svg>
+                                                    )}
+                                                </div>
+                                            );
                                         }
 
                                         if ((normalizedToolName === 'searchyoutubevideos') && result != null) {

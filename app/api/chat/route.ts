@@ -12,14 +12,17 @@ const google = createGoogleGenerativeAI({
 });
 
 // Allow streaming responses up to 120 seconds (agent loops need more time)
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 const handler = async (req: Request) => {
   const { messages, userId, challengeId }: { messages: Array<UIMessage>; userId?: string; challengeId: string } = await req.json();
 
   const challenge = getChallengeConfig(challengeId);
 
-  // Inject audio file URLs as text so the model knows the real URL for the recognizeSong tool
+  // For longtone/pitchmatching: strip audio file parts and inject URLs as text
+  // (the model only needs the URL to pass to server-side analysis tools)
+  // For karaoke: keep audio file parts so Gemini can hear the actual singing with lyrics
+  const stripAudioFiles = challengeId !== 'karaoke';
   const augmentedMessages = messages.map((msg) => {
     if (msg.role !== 'user' || !Array.isArray(msg.parts)) return msg;
     const fileUrls = msg.parts
@@ -29,13 +32,11 @@ const handler = async (req: Request) => {
     return {
       ...msg,
       parts: [
-        ...msg.parts,
+        ...(stripAudioFiles ? msg.parts.filter((p: any) => p.type !== 'file') : msg.parts),
         ...fileUrls.map((url: string) => ({ type: 'text' as const, text: `Audio file URL: ${url}` })),
       ],
     };
   });
-
-  const convertedMessages = await convertToModelMessages(augmentedMessages);
 
   console.log(`[chat] request`, {
     challengeId,
