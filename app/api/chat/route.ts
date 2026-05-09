@@ -8,7 +8,7 @@ import { isLangfuseEnabled, langfuseSpanProcessor } from '@/instrumentation';
 import { getChallengeConfig } from '@/lib/challenges';
 
 const google = createGoogleGenerativeAI({
-  apiKey: process.env.GOOGLE_GENERATIVE_AI_KEY,
+  apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
 });
 
 // Allow streaming responses up to 120 seconds (agent loops need more time)
