@@ -107,7 +107,7 @@ export function ChatMessages({ messages, isLoading, uploadProgress }: ChatMessag
                 m.role !== 'system' ? (
                     <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} mb-3`}>
                         <div
-                            className={`p-4 rounded-3xl max-w-[85%] ${m.role === 'user' ? 'rounded-br-none' : 'rounded-bl-none'}`}
+                            className={`p-4 rounded-3xl max-w-[85%] ${m.role === 'user' ? 'rounded-br-none' : 'rounded-bl-none text-left'}`}
                             style={m.role === 'user'
                                 ? { background: 'linear-gradient(135deg, rgba(255,45,122,0.25), rgba(139,92,246,0.25))', border: '1px solid rgba(255,45,122,0.3)', color: 'rgba(255,255,255,0.95)' }
                                 : { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(240,235,248,0.9)' }

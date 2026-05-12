@@ -73,7 +73,7 @@ const handler = async (req: Request) => {
     maxRetries: 0,
     model: google(selectedModel),
     providerOptions: {
-      google: { thinkingConfig: { includeThoughts: false } },
+      google: { thinkingConfig: { includeThoughts: false, thinkingBudget: 4096 } },
     },
     system: challenge.system,
     messages: await convertToModelMessages(augmentedMessages),
