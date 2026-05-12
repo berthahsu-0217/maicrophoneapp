@@ -7,7 +7,7 @@ import { makeKaraokeTools, makeLongToneTools, makePitchMatchingTools } from '@/l
 
 export interface ChallengeConfig {
     system: string;
-    tools: (userId?: string) => Record<string, Tool>;
+    tools: (userId?: string, audioUrl?: string) => Record<string, Tool>;
 }
 
 function loadPrompt(name: string): string {
@@ -21,11 +21,11 @@ const challenges: Record<string, ChallengeConfig> = {
     },
     pitchmatching: {
         system: loadPrompt('pitchmatching'),
-        tools: (userId) => makePitchMatchingTools(userId),
+        tools: (userId, audioUrl) => makePitchMatchingTools(userId, audioUrl),
     },
     longtone: {
         system: loadPrompt('longtone'),
-        tools: (userId) => makeLongToneTools(userId),
+        tools: (userId, audioUrl) => makeLongToneTools(userId, audioUrl),
     },
     karaoke: {
         system: loadPrompt('karaoke'),

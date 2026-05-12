@@ -18,7 +18,6 @@ const ALLOWED_MODELS = [
   'gemini-3.1-pro-preview', 'gemini-3-pro-preview', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite-preview',
   'gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.5-flash-lite',
   'gemini-2.0-flash', 'gemini-2.0-flash-lite',
-  'gemma-4-31b-it', 'gemma-4-26b-a4b-it',
 ] as const;
 
 const handler = async (req: Request) => {
@@ -46,6 +45,22 @@ const handler = async (req: Request) => {
     };
   });
 
+  // Extract the latest audio file URL from messages to pass programmatically to tools
+  const latestAudioUrl = (() => {
+    for (let i = augmentedMessages.length - 1; i >= 0; i--) {
+      const msg = augmentedMessages[i];
+      if (msg.role !== 'user' || !Array.isArray(msg.parts)) continue;
+      for (const p of msg.parts as any[]) {
+        if (p.type === 'text' && typeof p.text === 'string') {
+          const match = p.text.match(/Audio file URL: (\S+)/);
+          if (match) return match[1];
+        }
+        if (p.type === 'file' && p.url) return p.url as string;
+      }
+    }
+    return undefined;
+  })();
+
   console.log(`[chat] request`, {
     challengeId,
     userId,
@@ -62,7 +77,7 @@ const handler = async (req: Request) => {
     },
     system: challenge.system,
     messages: await convertToModelMessages(augmentedMessages),
-    tools: challenge.tools(userId),
+    tools: challenge.tools(userId, latestAudioUrl),
     stopWhen: stepCountIs(10),
     experimental_telemetry: { isEnabled: isLangfuseEnabled },
     onStepFinish: (event) => {

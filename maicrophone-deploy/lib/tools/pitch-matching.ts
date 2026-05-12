@@ -140,16 +140,16 @@ async function detectNoteEvents(samples: Float32Array, sampleRate: number): Prom
     return events.filter((e) => e.frames.length >= 5);
 }
 
-export function makePitchMatchingTools(userId?: string) {
+export function makePitchMatchingTools(userId?: string, audioUrl?: string) {
     return {
         analyzePitch: tool({
             description:
-                'Analyze a user\'s singing recording against target notes. Downloads the WAV, detects pitched note events, aligns them with target notes, and returns per-note scores.',
+                'Analyze a user\'s singing recording against target notes. Downloads the WAV, detects pitched note events, aligns them with target notes, and returns per-note scores. The audio URL is provided automatically.',
             inputSchema: z.object({
                 targetNotes: z.array(z.string()).length(5).describe('Array of 5 target notes in scientific notation, e.g. ["C4", "E4", "G4", "A4", "C5"]'),
-                audioUrl: z.string().url().describe('Public URL of the user\'s WAV recording'),
             }),
-            execute: async ({ targetNotes, audioUrl }) => {
+            execute: async ({ targetNotes }) => {
+                if (!audioUrl) return { error: 'No audio URL available' };
                 const res = await fetch(audioUrl, { signal: AbortSignal.timeout(30_000) });
                 if (!res.ok) return { error: `Failed to download audio: ${res.status}` };
                 const buffer = await res.arrayBuffer();

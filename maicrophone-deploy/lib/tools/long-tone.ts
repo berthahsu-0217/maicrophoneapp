@@ -186,16 +186,16 @@ function classifyFrame(f: FrameFeatures): FrameStatus {
 
 // --- Tools ---
 
-export function makeLongToneTools(userId?: string) {
+export function makeLongToneTools(userId?: string, audioUrl?: string) {
     return {
         analyzeCleanDuration: tool({
             description:
-                'Analyze the clean (non-breathy, non-silent) duration of a long tone recording. Returns how many seconds the user maintained a clean tone.',
+                'Analyze the clean (non-breathy, non-silent) duration of a long tone recording. Returns how many seconds the user maintained a clean tone. The audio URL is provided automatically.',
             inputSchema: z.object({
                 targetNote: z.string().describe('Target note in scientific notation, e.g. "E4"'),
-                audioUrl: z.string().url().describe('Public URL of the user\'s WAV recording'),
             }),
-            execute: async ({ targetNote, audioUrl }) => {
+            execute: async ({ targetNote }) => {
+                if (!audioUrl) return { error: 'No audio URL available' };
                 let samples: Float32Array, sampleRate: number;
                 try {
                     ({ samples, sampleRate } = await downloadAndDecode(audioUrl));
@@ -249,12 +249,12 @@ export function makeLongToneTools(userId?: string) {
 
         analyzePitchStability: tool({
             description:
-                'Analyze pitch stability of a long tone recording. Measures how consistently the user holds the target note by calculating cents deviation statistics.',
+                'Analyze pitch stability of a long tone recording. Measures how consistently the user holds the target note by calculating cents deviation statistics. The audio URL is provided automatically.',
             inputSchema: z.object({
                 targetNote: z.string().describe('Target note in scientific notation, e.g. "E4"'),
-                audioUrl: z.string().url().describe('Public URL of the user\'s WAV recording'),
             }),
-            execute: async ({ targetNote, audioUrl }) => {
+            execute: async ({ targetNote }) => {
+                if (!audioUrl) return { error: 'No audio URL available' };
                 let samples: Float32Array, sampleRate: number;
                 try {
                     ({ samples, sampleRate } = await downloadAndDecode(audioUrl));
@@ -330,11 +330,10 @@ export function makeLongToneTools(userId?: string) {
 
         analyzeToneQuality: tool({
             description:
-                'Analyze tone quality of a long tone recording. Measures spectral flatness (breathiness) and spectral slope to evaluate how clean and pure the tone is.',
-            inputSchema: z.object({
-                audioUrl: z.string().url().describe('Public URL of the user\'s WAV recording'),
-            }),
-            execute: async ({ audioUrl }) => {
+                'Analyze tone quality of a long tone recording. Measures spectral flatness (breathiness) and spectral slope to evaluate how clean and pure the tone is. The audio URL is provided automatically.',
+            inputSchema: z.object({}),
+            execute: async () => {
+                if (!audioUrl) return { error: 'No audio URL available' };
                 let samples: Float32Array, sampleRate: number;
                 try {
                     ({ samples, sampleRate } = await downloadAndDecode(audioUrl));
@@ -395,11 +394,10 @@ export function makeLongToneTools(userId?: string) {
 
         analyzeVolumeSteadiness: tool({
             description:
-                'Analyze volume steadiness of a long tone recording. Measures how consistently the user maintains volume by calculating RMS coefficient of variation and detecting decay.',
-            inputSchema: z.object({
-                audioUrl: z.string().url().describe('Public URL of the user\'s WAV recording'),
-            }),
-            execute: async ({ audioUrl }) => {
+                'Analyze volume steadiness of a long tone recording. Measures how consistently the user maintains volume by calculating RMS coefficient of variation and detecting decay. The audio URL is provided automatically.',
+            inputSchema: z.object({}),
+            execute: async () => {
+                if (!audioUrl) return { error: 'No audio URL available' };
                 let samples: Float32Array, sampleRate: number;
                 try {
                     ({ samples, sampleRate } = await downloadAndDecode(audioUrl));
