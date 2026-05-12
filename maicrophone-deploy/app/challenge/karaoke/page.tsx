@@ -5,7 +5,7 @@ import { DefaultChatTransport } from 'ai';
 import { ArrowLeft, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { ChatInputBar } from '@/components/chat-input-bar';
 import { ChatMessages } from '@/components/chat-messages';
@@ -75,11 +75,13 @@ export default function KaraokeChallenge() {
     useEffect(() => {
         if (!hasInitialized.current && user) {
             hasInitialized.current = true;
+            setRecordingUnlocked(false);
             sendMessage({ role: 'user', parts: [{ type: 'text', text: '開始' }] as any });
         }
     }, [user]); // eslint-disable-line
 
     const [audioSubmitted, setAudioSubmitted] = useState(false);
+    const [recordingUnlocked, setRecordingUnlocked] = useState(false);
     const showNavButtons = audioSubmitted && !isLoading;
 
     const prevScoresRef = useRef<Scores | null>(null);
@@ -108,14 +110,15 @@ export default function KaraokeChallenge() {
             .catch(console.error);
     }, [showNavButtons]); // eslint-disable-line
 
-    const recordingUnlocked = useMemo(() => {
-        return messages.some((m) => {
+    useEffect(() => {
+        const unlocked = messages.some((m) => {
             if (m.role !== 'assistant' || !Array.isArray(m.parts)) return false;
             return (m.parts as any[]).some((p: any) =>
                 p.type === 'text' && typeof p.text === 'string' &&
                 (p.text.includes('伴奏') || p.text.includes('版本') || p.text.includes('找到') || p.text.includes('YouTube'))
             );
         });
+        if (unlocked) setRecordingUnlocked(true);
     }, [messages]);
 
     const { isListening, stop: stopListening, toggle: toggleListening } = useSpeechToText(

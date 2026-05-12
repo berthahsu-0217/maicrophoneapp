@@ -5,25 +5,75 @@ const YOUTUBE_VIDEO_ID_RE = /^[a-zA-Z0-9_-]{11}$/;
 const NOTE_ARRAY_RE = /\[\s*"[A-Ga-g][#b]?\d"(?:\s*,\s*"[A-Ga-g][#b]?\d")*\s*\]/;
 const LONGTONE_TARGET_RE = /\{\s*"note"\s*:\s*"([A-Ga-g]#?\d)"\s*,\s*"vowel"\s*:\s*"(\w+)"\s*\}/;
 
+function stripCodeFences(text: string): string {
+    // Remove ```json ... ``` (or any language) wrappers so raw JSON isn't shown
+    return text.replace(/```[a-zA-Z]*\s*\n?([\s\S]*?)```/g, '$1').trim();
+}
+
 function renderMarkdown(text: string): React.ReactNode {
-    const paragraphs = text.split('\n').filter((p) => p.trim() !== '');
-    if (paragraphs.length === 0) return null;
-    return (
-        <>
-            {paragraphs.map((para, pIdx) => {
-                const parts = para.split(/(\*\*[^*]+\*\*)/g);
-                return (
-                    <p key={pIdx} style={{ marginTop: pIdx > 0 ? '0.6rem' : 0, lineHeight: '1.65' }}>
-                        {parts.map((part, i) =>
-                            part.startsWith('**') && part.endsWith('**')
-                                ? <strong key={i} style={{ fontWeight: 700, color: '#FF2D7A' }}>{part.slice(2, -2)}</strong>
-                                : <span key={i}>{part}</span>
-                        )}
-                    </p>
-                );
-            })}
-        </>
-    );
+    const cleaned = stripCodeFences(text);
+    const lines = cleaned.split('\n');
+
+    const elements: React.ReactNode[] = [];
+    let idx = 0;
+    let listItems: { ordered: boolean; content: string }[] = [];
+
+    const flushList = () => {
+        if (listItems.length === 0) return;
+        const ordered = listItems[0].ordered;
+        const items = listItems.map((li, j) => <li key={j} style={{ marginLeft: '1.2rem', lineHeight: '1.65' }}>{renderInline(li.content)}</li>);
+        elements.push(ordered
+            ? <ol key={`ol-${idx}`} style={{ listStyleType: 'decimal', paddingLeft: '0.5rem', marginTop: '0.4rem', marginBottom: '0.4rem' }}>{items}</ol>
+            : <ul key={`ul-${idx}`} style={{ listStyleType: 'disc', paddingLeft: '0.5rem', marginTop: '0.4rem', marginBottom: '0.4rem' }}>{items}</ul>);
+        listItems = [];
+    };
+
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed === '') { flushList(); idx++; continue; }
+
+        // Headings
+        const headingMatch = trimmed.match(/^(#{1,4})\s+(.+)$/);
+        if (headingMatch) {
+            flushList();
+            const level = headingMatch[1].length;
+            const sizes = ['1.25rem', '1.1rem', '1rem', '0.95rem'];
+            elements.push(<div key={idx} style={{ fontSize: sizes[level - 1], fontWeight: 700, color: '#FF2D7A', marginTop: '0.6rem', marginBottom: '0.3rem' }}>{renderInline(headingMatch[2])}</div>);
+            idx++; continue;
+        }
+
+        // Unordered list
+        const ulMatch = trimmed.match(/^[-*+]\s+(.+)$/);
+        if (ulMatch) { listItems.push({ ordered: false, content: ulMatch[1] }); idx++; continue; }
+
+        // Ordered list
+        const olMatch = trimmed.match(/^\d+[.)]\s+(.+)$/);
+        if (olMatch) { listItems.push({ ordered: true, content: olMatch[1] }); idx++; continue; }
+
+        flushList();
+        elements.push(<p key={idx} style={{ marginTop: idx > 0 ? '0.4rem' : 0, lineHeight: '1.65' }}>{renderInline(trimmed)}</p>);
+        idx++;
+    }
+    flushList();
+    return elements.length > 0 ? <>{elements}</> : null;
+}
+
+/** Render inline markdown: bold, italic, inline code, links */
+function renderInline(text: string): React.ReactNode {
+    // Split on inline patterns: **bold**, *italic*, `code`, [text](url)
+    const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g);
+    return parts.map((part, i) => {
+        if (part.startsWith('**') && part.endsWith('**'))
+            return <strong key={i} style={{ fontWeight: 700, color: '#FF2D7A' }}>{part.slice(2, -2)}</strong>;
+        if (part.startsWith('*') && part.endsWith('*'))
+            return <em key={i}>{part.slice(1, -1)}</em>;
+        if (part.startsWith('`') && part.endsWith('`'))
+            return <code key={i} style={{ background: 'rgba(255,255,255,0.1)', padding: '0.1rem 0.35rem', borderRadius: '0.25rem', fontSize: '0.85em' }}>{part.slice(1, -1)}</code>;
+        const linkMatch = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+        if (linkMatch)
+            return <a key={i} href={linkMatch[2]} target="_blank" rel="noreferrer" style={{ color: '#8B5CF6', textDecoration: 'underline' }}>{linkMatch[1]}</a>;
+        return <span key={i}>{part}</span>;
+    });
 }
 
 interface YouTubeVideoResult {
@@ -122,7 +172,7 @@ export function ChatMessages({ messages, isLoading, uploadProgress }: ChatMessag
                                         </details>
                                     );
                                     if (p.type === 'text') {
-                                        const text = p.text ?? '';
+                                        const text = stripCodeFences(p.text ?? '');
                                         const isAssistant = m.role === 'assistant';
 
                                         const longtoneMatch = text.match(LONGTONE_TARGET_RE);

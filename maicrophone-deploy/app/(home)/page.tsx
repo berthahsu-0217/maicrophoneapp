@@ -1,6 +1,6 @@
 'use client';
 
-import { LogOut, Mic2, Music, Trophy, Wind } from 'lucide-react';
+import { Headphones, LogOut, Mic2, Music, Trophy, Wind } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
@@ -230,6 +230,33 @@ export default function HomePage() {
                         <p className="text-xs mt-0.5" style={{ color: 'rgba(240,235,248,0.4)' }}>查看分數排行榜</p>
                     </div>
                     <span style={{ color: 'rgba(139,92,246,0.5)' }}>→</span>
+                </Link>
+
+                {/* 森林迴響 - Past recordings */}
+                <Link href="/recordings"
+                    className="flex items-center gap-4 p-4 rounded-2xl transition-all duration-200 mt-3"
+                    style={{
+                        background: 'rgba(34,197,94,0.06)',
+                        border: '1px solid rgba(34,197,94,0.2)',
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'rgba(34,197,94,0.12)';
+                        e.currentTarget.style.borderColor = 'rgba(34,197,94,0.4)';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'rgba(34,197,94,0.06)';
+                        e.currentTarget.style.borderColor = 'rgba(34,197,94,0.2)';
+                    }}
+                >
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                        style={{ background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)' }}>
+                        <Headphones className="w-6 h-6" style={{ color: '#22C55E' }} />
+                    </div>
+                    <div className="flex-1">
+                        <h3 className="font-bold text-white text-sm">森林迴響</h3>
+                        <p className="text-xs mt-0.5" style={{ color: 'rgba(240,235,248,0.4)' }}>聆聽歷史錄音</p>
+                    </div>
+                    <span style={{ color: 'rgba(34,197,94,0.5)' }}>→</span>
                 </Link>
 
             </div>
