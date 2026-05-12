@@ -17,11 +17,11 @@ interface RadarChartModalProps {
 
 // 五個維度，順時針從頂部開始
 const AXES = [
-    { key: 'pitch',      label: '音準', max: 50 },
-    { key: 'technique',  label: '技巧', max: 50 },
+    { key: 'pitch', label: '音準', max: 50 },
+    { key: 'technique', label: '技巧', max: 50 },
     { key: 'expression', label: '情感', max: 50 },
-    { key: 'rhythm',     label: '節奏', max: 50 },
-    { key: 'stability',  label: '氣息', max: 50 },
+    { key: 'rhythm', label: '節奏', max: 50 },
+    { key: 'stability', label: '氣息', max: 50 },
 ];
 
 const CX = 150, CY = 150, R = 90;
@@ -119,11 +119,11 @@ export function RadarChartModal({ scores, onClose }: RadarChartModalProps) {
         + (scores.expression ?? 0) + (scores.technique ?? 0);
 
     function getTitle(t: number) {
-        if (t >= 221) return '天籟之音 ✨';
-        if (t >= 151) return '麥克風稱霸者 🎤';
-        if (t >= 101) return 'KTV 模範生 🎵';
-        if (t >= 51)  return '愛唱歌的路人 🎶';
-        return '大音痴是你 😅';
+        if (t >= 200) return '聲林之王 ✨';
+        if (t >= 150) return '歌唱精靈 🎤';
+        if (t >= 100) return '吟遊詩人 🎵';
+        if (t >= 50) return '很吵的靈長類 🎶';
+        return '大音癡哥布林 😅';
     }
 
     return (

@@ -1,10 +1,12 @@
 import type { AudioAttachment } from '@/hooks/use-audio-recorder';
-import { FileAudio, Mic, MicOff, Send, Square, X } from 'lucide-react';
+import { AudioLines, CircleStop, FileAudio, Send, Square, X } from 'lucide-react';
+import { useEffect } from 'react';
 
 interface ChatInputBarProps {
     input: string;
     onInputChange: (value: string) => void;
     onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
+    onStop?: () => void;
     isLoading: boolean;
     isListening: boolean;
     onToggleListening: () => void;
@@ -22,12 +24,19 @@ function formatTime(s: number) {
 }
 
 export function ChatInputBar({
-    input, onInputChange, onSubmit, isLoading,
+    input, onInputChange, onSubmit, onStop, isLoading,
     isListening, onToggleListening,
     isRecording, recordingTime, audioAttachment,
     onStartRecording, onStopRecording, onClearAttachment,
     recordingUnlocked = true,
 }: ChatInputBarProps) {
+
+    useEffect(() => {
+        if (!isLoading || !onStop) return;
+        const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onStop(); };
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, [isLoading, onStop]);
 
     const canRecord = recordingUnlocked && !isLoading;
     const showRecordingCTA = recordingUnlocked && !isRecording && !audioAttachment && !isLoading;
@@ -87,7 +96,7 @@ export function ChatInputBar({
                         : { background: 'rgba(255,255,255,0.08)', color: 'rgba(240,235,248,0.5)' }}
                     title={isListening ? '停止語音輸入' : '語音輸入'}
                 >
-                    {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                    <AudioLines className="w-4 h-4" />
                 </button>
 
                 {/* Record audio button */}
@@ -114,19 +123,19 @@ export function ChatInputBar({
                         title="開始錄音唱歌"
                     >
                         <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                            <path d="M19 10v2a7 7 0 0 1-14 0v-2H3v2a9 9 0 0 0 8 8.94V23h2v-2.06A9 9 0 0 0 21 12v-2h-2z"/>
+                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2H3v2a9 9 0 0 0 8 8.94V23h2v-2.06A9 9 0 0 0 21 12v-2h-2z" />
                         </svg>
                     </button>
                 ) : (
                     <button type="button" disabled
                         className="p-2.5 rounded-full flex-shrink-0 cursor-not-allowed"
                         style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(240,235,248,0.2)' }}
-                        title="請先跟 Maicrophone 對話，取得目標後才能錄音"
+                        title="請先跟 Maicrophone 對話，獲取目標音符或歌曲之後才能錄音喔"
                     >
                         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                            <path d="M19 10v2a7 7 0 0 1-14 0v-2H3v2a9 9 0 0 0 8 8.94V23h2v-2.06A9 9 0 0 0 21 12v-2h-2z"/>
+                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2H3v2a9 9 0 0 0 8 8.94V23h2v-2.06A9 9 0 0 0 21 12v-2h-2z" />
                         </svg>
                     </button>
                 )}
@@ -135,23 +144,33 @@ export function ChatInputBar({
                     type="text"
                     value={input}
                     onChange={(e) => onInputChange(e.target.value)}
-                    placeholder={isListening ? '聆聽中...' : isRecording ? '錄音中...' : '跟 Maicrophone 說話...'}
+                    placeholder={isListening ? '聆聽中...' : isRecording ? '錄音中...結束後記得按停止錄音喔' : '跟 Maicrophone 說話...'}
                     className="flex-1 bg-transparent border-none outline-none text-sm px-2 py-1"
                     style={{ color: 'white' }}
                 />
 
-                <button type="submit"
-                    disabled={isLoading || (!input.trim() && !audioAttachment)}
-                    className="p-2.5 rounded-full flex-shrink-0 transition disabled:opacity-30"
-                    style={{ background: 'linear-gradient(135deg, #8B5CF6, #FF2D7A)' }}
-                >
-                    <Send className="w-4 h-4 text-white" />
-                </button>
+                {isLoading && onStop ? (
+                    <button type="button" onClick={onStop}
+                        className="p-2.5 rounded-full flex-shrink-0 transition hover:opacity-80"
+                        style={{ background: 'rgba(255,45,122,0.25)', border: '1px solid rgba(255,45,122,0.5)' }}
+                        title="取消生成 (Esc)"
+                    >
+                        <CircleStop className="w-4 h-4" style={{ color: '#FF2D7A' }} />
+                    </button>
+                ) : (
+                    <button type="submit"
+                        disabled={isLoading || (!input.trim() && !audioAttachment)}
+                        className="p-2.5 rounded-full flex-shrink-0 transition disabled:opacity-30"
+                        style={{ background: 'linear-gradient(135deg, #8B5CF6, #FF2D7A)' }}
+                    >
+                        <Send className="w-4 h-4 text-white" />
+                    </button>
+                )}
             </form>
 
             {!recordingUnlocked && (
                 <p className="text-center text-xs" style={{ color: 'rgba(240,235,248,0.3)' }}>
-                    請先跟 Maicrophone 對話，取得目標音符後才能錄音 🎵
+                    請先跟 Maicrophone 對話，獲取目標音符或歌曲之後才能錄音喔 🎵
                 </p>
             )}
         </div>

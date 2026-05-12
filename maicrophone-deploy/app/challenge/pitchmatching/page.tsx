@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { ChatInputBar } from '@/components/chat-input-bar';
 import { ChatMessages } from '@/components/chat-messages';
+import { DEFAULT_MODEL, ModelSelector, type ModelId } from '@/components/model-selector';
 import { PitchVisualizer } from '@/components/pitch-visualizer';
 import { RadarChartModal } from '@/components/radar-chart-modal';
 import { useAudioRecorder } from '@/hooks/use-audio-recorder';
@@ -35,20 +36,20 @@ function ForestBackground() {
                 preserveAspectRatio="xMidYMax slice" style={{ width: '100%', height: '100%' }}>
                 <polygon points="160,175 185,280 135,280" fill="rgba(110,45,155,0.38)" />
                 <polygon points="260,185 290,280 230,280" fill="rgba(100,38,145,0.38)" />
-                <polygon points="50,155 82,280 18,280"   fill="rgba(90,30,135,0.42)" />
+                <polygon points="50,155 82,280 18,280" fill="rgba(90,30,135,0.42)" />
                 <polygon points="340,150 378,280 302,280" fill="rgba(90,30,135,0.42)" />
-                <polygon points="65,108  97,280  33,280"  fill="rgba(48,10,88,0.72)" />
-                <polygon points="210,98 252,280 168,280"  fill="rgba(44,8,80,0.68)" />
+                <polygon points="65,108  97,280  33,280" fill="rgba(48,10,88,0.72)" />
+                <polygon points="210,98 252,280 168,280" fill="rgba(44,8,80,0.68)" />
                 <polygon points="355,112 392,280 318,280" fill="rgba(48,10,88,0.72)" />
-                <polygon points="-15,18  34,280 -64,280"  fill="rgba(14,4,28,0.97)" />
-                <polygon points="42,-8   91,280  -7,280"  fill="rgba(11,3,24,0.98)" />
-                <polygon points="115,28 160,280  70,280"  fill="rgba(14,4,28,0.93)" />
-                <polygon points="305,38 350,280 260,280"  fill="rgba(14,4,28,0.93)" />
-                <polygon points="370,-2 420,280 320,280"  fill="rgba(11,3,24,0.98)" />
-                <polygon points="432,12 480,280 384,280"  fill="rgba(14,4,28,0.97)" />
-                <polygon points="42,28  66,88  18,88"    fill="rgba(11,3,24,0.98)" />
-                <polygon points="370,32 394,92 346,92"   fill="rgba(11,3,24,0.98)" />
-                <polygon points="115,72 140,132 90,132"  fill="rgba(14,4,28,0.93)" />
+                <polygon points="-15,18  34,280 -64,280" fill="rgba(14,4,28,0.97)" />
+                <polygon points="42,-8   91,280  -7,280" fill="rgba(11,3,24,0.98)" />
+                <polygon points="115,28 160,280  70,280" fill="rgba(14,4,28,0.93)" />
+                <polygon points="305,38 350,280 260,280" fill="rgba(14,4,28,0.93)" />
+                <polygon points="370,-2 420,280 320,280" fill="rgba(11,3,24,0.98)" />
+                <polygon points="432,12 480,280 384,280" fill="rgba(14,4,28,0.97)" />
+                <polygon points="42,28  66,88  18,88" fill="rgba(11,3,24,0.98)" />
+                <polygon points="370,32 394,92 346,92" fill="rgba(11,3,24,0.98)" />
+                <polygon points="115,72 140,132 90,132" fill="rgba(14,4,28,0.93)" />
                 <polygon points="305,82 330,138 280,138" fill="rgba(14,4,28,0.93)" />
                 <rect x="-10" y="260" width="440" height="30" fill="rgba(10,3,20,0.99)" />
             </svg>
@@ -62,10 +63,11 @@ export default function DoReMiChallenge() {
     const user = useAuth();
     const router = useRouter();
     const [input, setInput] = useState('');
+    const [modelId, setModelId] = useState<ModelId>(DEFAULT_MODEL);
 
-    const { messages, sendMessage, setMessages, status } = useChat({
+    const { messages, sendMessage, setMessages, status, stop } = useChat({
         transport: new DefaultChatTransport({
-            body: () => ({ userId: user?.userId ?? getUser()?.userId, challengeId: 'pitchmatching' }),
+            body: () => ({ userId: user?.userId ?? getUser()?.userId, challengeId: 'pitchmatching', modelId }),
         }),
     });
     const [uploadProgress, setUploadProgress] = useState<string | null>(null);
@@ -82,6 +84,15 @@ export default function DoReMiChallenge() {
     const [audioSubmitted, setAudioSubmitted] = useState(false);
     const showNavButtons = audioSubmitted && !isLoading;
 
+    const prevScoresRef = useRef<Scores | null>(null);
+    useEffect(() => {
+        if (!user) return;
+        fetch(`/api/users/${user.userId}`)
+            .then((res) => res.json())
+            .then((data) => { if (data?.scores) prevScoresRef.current = data.scores; })
+            .catch(console.error);
+    }, [user]); // eslint-disable-line
+
     const [radarScores, setRadarScores] = useState<Scores | null>(null);
     useEffect(() => {
         if (!showNavButtons || !user) return;
@@ -90,9 +101,11 @@ export default function DoReMiChallenge() {
             .then((data) => {
                 const s: Scores = data?.scores;
                 if (!s) return;
-                if (s.pitch > 0 && s.stability > 0 && s.rhythm > 0 && s.expression > 0 && s.technique > 0) {
-                    setRadarScores(s);
-                }
+                const allNonZero = s.pitch > 0 && s.stability > 0 && s.rhythm > 0 && s.expression > 0 && s.technique > 0;
+                if (!allNonZero) return;
+                const prev = prevScoresRef.current;
+                const hasUpdate = !prev || s.pitch > prev.pitch || s.stability > prev.stability || s.rhythm > prev.rhythm || s.expression > prev.expression || s.technique > prev.technique;
+                if (hasUpdate) setRadarScores(s);
             })
             .catch(console.error);
     }, [showNavButtons]); // eslint-disable-line
@@ -193,7 +206,9 @@ export default function DoReMiChallenge() {
                             style={{ background: 'linear-gradient(135deg, #FF2D7A, #8B5CF6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                             音靈谷
                         </h1>
-                        <p className="text-xs" style={{ color: 'rgba(240,235,248,0.4)' }}>魔法少女 Do Re Mi</p>
+                        <div className="flex justify-center mt-2">
+                            <ModelSelector value={modelId} onChange={setModelId} />
+                        </div>
                     </header>
 
                     <div className="flex-1 min-h-0 w-full overflow-y-auto p-4 font-medium">
@@ -203,7 +218,7 @@ export default function DoReMiChallenge() {
                     </div>
                 </div>
 
-                <div style={{ position: 'relative', zIndex: 10, width: '100%' }}>
+                <div className="max-w-lg mx-auto w-full" style={{ position: 'relative', zIndex: 10 }}>
                     <PitchVisualizer pitch={pitch} isRecording={isRecording} targetNotes={targetNotes} />
                     {showNavButtons && (
                         <div className="w-full max-w-md mx-auto px-4 pb-2">
@@ -220,7 +235,7 @@ export default function DoReMiChallenge() {
                         </div>
                     )}
                     <ChatInputBar
-                        input={input} onInputChange={setInput} onSubmit={handleSubmit} isLoading={isLoading}
+                        input={input} onInputChange={setInput} onSubmit={handleSubmit} onStop={stop} isLoading={isLoading}
                         isListening={isListening} onToggleListening={toggleListening}
                         isRecording={isRecording} recordingTime={recordingTime} audioAttachment={audioAttachment}
                         onStartRecording={startRecording} onStopRecording={stopRecording} onClearAttachment={clearAttachment}

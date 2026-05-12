@@ -12,11 +12,11 @@ const SCORE_COLUMNS: Record<string, string> = {
 };
 
 const TITLES: [number, string][] = [
-    [200, '麥克風稱霸者'],
+    [200, '聲林之王'],
     [150, '歌唱精靈'],
-    [100, '音樂行者'],
-    [50, '初出茅廬'],
-    [0, '大音痴是你'],
+    [100, '吟遊詩人'],
+    [50, '很吵的靈長類'],
+    [0, '大音癡哥布林'],
 ];
 
 function computeTitle(total: number): string {

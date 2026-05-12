@@ -5,6 +5,7 @@ import { DefaultChatTransport } from 'ai';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { DEFAULT_MODEL, ModelSelector, type ModelId } from '@/components/model-selector';
 import { useAuth } from '@/hooks/use-auth';
 import { useSpeechToText } from '@/hooks/use-speech-to-text';
 import { getUser } from '@/lib/auth';
@@ -16,19 +17,22 @@ const QUICK_REPLIES = [
     { label: '🎵 音準', value: '音準' },
     { label: '🌊 氣息', value: '氣息' },
     { label: '💫 情感', value: '情感' },
+    { label: '🎶 節奏', value: '節奏' },
+    { label: '🎤 技巧', value: '技巧' },
 ];
 
 export default function OnboardingPage() {
     const user = useAuth();
     const router = useRouter();
     const [input, setInput] = useState('');
+    const [modelId, setModelId] = useState<ModelId>(DEFAULT_MODEL);
     const hasInitialized = useRef(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const [redirecting, setRedirecting] = useState(false);
 
     const { messages, sendMessage, status } = useChat({
         transport: new DefaultChatTransport({
-            body: () => ({ userId: user?.userId ?? getUser()?.userId, challengeId: 'onboarding' }),
+            body: () => ({ userId: user?.userId ?? getUser()?.userId, challengeId: 'onboarding', modelId }),
         }),
     });
 
@@ -103,6 +107,9 @@ export default function OnboardingPage() {
                         Maicrophone
                     </h1>
                     <p className="text-xs mt-1" style={{ color: 'rgba(240,235,248,0.4)' }}>歌唱力養成森林 🌿</p>
+                    <div className="mt-2">
+                        <ModelSelector value={modelId} onChange={setModelId} />
+                    </div>
                 </div>
             </header>
 
@@ -198,8 +205,8 @@ export default function OnboardingPage() {
                         className="p-2 rounded-full flex-shrink-0 transition"
                         style={isListening ? { background: 'rgba(6,214,160,0.2)', color: '#06D6A0' } : { color: 'rgba(240,235,248,0.4)' }}>
                         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                            <path d="M19 10v2a7 7 0 0 1-14 0v-2H3v2a9 9 0 0 0 8 8.94V23h2v-2.06A9 9 0 0 0 21 12v-2h-2z"/>
+                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2H3v2a9 9 0 0 0 8 8.94V23h2v-2.06A9 9 0 0 0 21 12v-2h-2z" />
                         </svg>
                     </button>
                     <input type="text" value={input} onChange={(e) => setInput(e.target.value)}

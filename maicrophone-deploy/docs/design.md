@@ -55,9 +55,9 @@ MVP 使用瀏覽器 `localStorage` 儲存登入狀態，不依賴 server-side se
 
 前端需求：
 1. 頁面卡片：
-	- Title：魔法少女Do Re Mi，Subtitle：音準挑戰
-	- Title：一口氣到底，Subtitle：氣息控制挑戰
-	- Title：K哥之王，Subtitle：歌曲挑戰 
+	- Title：音靈谷，Subtitle：音準挑戰
+	- Title：風息嶺，Subtitle：氣息控制挑戰
+	- Title：星耀鎮，Subtitle：歌曲挑戰 
 	- Title：超級星光大道，Subtitle：查看分數排行榜
 2. 右上角使用者資訊
 	- username

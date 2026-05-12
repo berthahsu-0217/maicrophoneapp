@@ -14,9 +14,17 @@ const google = createGoogleGenerativeAI({
 // Allow streaming responses up to 120 seconds (agent loops need more time)
 export const maxDuration = 300;
 
-const handler = async (req: Request) => {
-  const { messages, userId, challengeId }: { messages: Array<UIMessage>; userId?: string; challengeId: string } = await req.json();
+const ALLOWED_MODELS = [
+  'gemini-3.1-pro-preview', 'gemini-3-pro-preview', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite-preview',
+  'gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.5-flash-lite',
+  'gemini-2.0-flash', 'gemini-2.0-flash-lite',
+  'gemma-4-31b-it', 'gemma-4-26b-a4b-it',
+] as const;
 
+const handler = async (req: Request) => {
+  const { messages, userId, challengeId, modelId }: { messages: Array<UIMessage>; userId?: string; challengeId: string; modelId?: string } = await req.json();
+
+  const selectedModel = ALLOWED_MODELS.includes(modelId as any) ? modelId! : 'gemini-2.5-flash';
   const challenge = getChallengeConfig(challengeId);
 
   // For longtone/pitchmatching: strip audio file parts and inject URLs as text
@@ -41,13 +49,14 @@ const handler = async (req: Request) => {
   console.log(`[chat] request`, {
     challengeId,
     userId,
+    model: selectedModel,
     messageCount: messages.length,
     lastMessage: JSON.stringify(messages[messages.length - 1]?.parts?.map((p: any) => ({ type: p.type, text: p.text?.slice(0, 80), url: p.url }))),
   });
 
   const result = streamText({
     maxRetries: 0,
-    model: google('gemini-2.5-flash'),
+    model: google(selectedModel),
     providerOptions: {
       google: { thinkingConfig: { includeThoughts: false } },
     },

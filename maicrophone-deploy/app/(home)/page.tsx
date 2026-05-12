@@ -20,17 +20,17 @@ interface UserProfile {
 }
 
 function getTitle(total: number): string {
-    if (total >= 221) return '天籟之音';
-    if (total >= 151) return '麥克風稱霸者';
-    if (total >= 101) return 'KTV模範生';
-    if (total >= 51) return '愛唱歌的路人';
-    return '大音痴是你';
+    if (total >= 200) return '聲林之王';
+    if (total >= 150) return '歌唱精靈';
+    if (total >= 100) return '吟遊詩人';
+    if (total >= 50) return '很吵的靈長類';
+    return '大音癡哥布林';
 }
 
 const challenges = [
     {
         num: '第一關',
-        title: '魔法少女 Do Re Mi',
+        title: '音靈谷',
         subtitle: '音準挑戰',
         emoji: '🎵',
         icon: Music,
@@ -38,7 +38,7 @@ const challenges = [
     },
     {
         num: '第二關',
-        title: '一口氣到底',
+        title: '風息嶺',
         subtitle: '氣息控制挑戰',
         emoji: '🌊',
         icon: Wind,
@@ -46,7 +46,7 @@ const challenges = [
     },
     {
         num: '第三關',
-        title: 'K哥之王',
+        title: '星耀鎮',
         subtitle: '歌曲挑戰',
         emoji: '🎤',
         icon: Mic2,
